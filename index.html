@@ -542,14 +542,22 @@ function renderFilters(){
 
 function socialLinksHtml(l){
   var q = encodeURIComponent((l.name || "") + " " + (l.company || ""));
+  var cq = encodeURIComponent(l.company || "");
+  var soc = l.sociallinks || {};
+  /* real stored URLs take priority: they open the actual page, not a search */
+  var linkedin = (soc.linkedin && String(soc.linkedin).indexOf("http") === 0)
+    ? soc.linkedin
+    : "https://www.linkedin.com/search/results/all/?keywords=" + cq;
+  var website = (soc.website && String(soc.website).indexOf("http") === 0) ? soc.website : "";
   var links = [
-    ["IN", "https://www.linkedin.com/search/results/all/?keywords=" + q],
+    ["IN", linkedin],
     ["X", "https://x.com/search?q=" + q],
-    ["FB", "https://www.facebook.com/search/top?q=" + q],
+    ["FB", "https://www.facebook.com/search/top?q=" + cq],
     ["GG", "https://www.google.com/search?q=" + q]
   ];
+  if (website) links.unshift(["W", website]);
   return '<div class="socials">' + links.map(function(p){
-    return '<a class="soc" href="' + p[1] + '" target="_blank" rel="noopener noreferrer" title="Search ' + esc(l.name) + '">' + esc(p[0]) + '</a>';
+    return '<a class="soc" href="' + p[1] + '" target="_blank" rel="noopener noreferrer" title="' + esc(p[1]) + '">' + esc(p[0]) + '</a>';
   }).join("") + "</div>";
 }
 
@@ -1136,7 +1144,7 @@ function runFind(back){
     '"contactTitle":"their job title",' +
     '"email":"their real public email or best publicly listed company contact email, empty string if truly not findable",' +
     '"phone":"publicly listed phone number, empty string if none",' +
-    '"linkedin":"company or contact LinkedIn URL",' +
+    '"linkedin":"the DIRECT LinkedIn URL of the company page or contact profile, like https://www.linkedin.com/company/NAME or https://www.linkedin.com/in/NAME - never a search or directory link",' +
     '"website":"company website URL",' +
     '"notes":"one line on what they do and why they could be a good lead"}.' +
     " Only include companies you actually know from your knowledge. Never invent emails or phone numbers: leave them empty if not known. " +
