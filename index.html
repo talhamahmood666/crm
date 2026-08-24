@@ -307,7 +307,7 @@
     </div>
 
     <div id="view-live" class="hidden">
-      <div class="toolbar"><span class="finder-status" style="margin:0">Refreshes every 15s &middot; online = heartbeat in the last 60s</span><span class="spacer"></span><button id="btn-users">Manage Users</button><button id="btn-live-refresh" class="primary">Refresh Now</button></div>
+      <div class="toolbar"><span class="finder-status" style="margin:0">Refreshes every 15s &middot; online = heartbeat in the last 60s</span><span class="spacer"></span><button id="btn-users">Manage Users</button><button id="btn-batch">Industry Assignment</button><button id="btn-live-refresh" class="primary">Refresh Now</button></div>
       <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));max-width:520px;margin-bottom:16px">
         <div class="stat t-won"><span class="num" id="live-count">-</span><span class="lbl">Online Now</span></div>
         <div class="stat t-total"><span class="num" id="today-count">-</span><span class="lbl">Active Today</span></div>
@@ -587,7 +587,9 @@ function renderTable(){
     }
 
     tr.innerHTML =
-      "<td><strong>" + esc(l.name) + "</strong></td>" +
+      "<td><strong>" + esc(l.name) + "</strong>" +
+        (l.sociallinks && l.sociallinks.industry ? ' <span class="badge member" style="font-size:9px">' + esc(l.sociallinks.industry) + "</span>" : "") +
+      "</td>" +
       "<td>" + esc(l.company) + "</td>" +
       "<td>" + esc(l.email) + "</td>" +
       "<td>" + esc(l.phone) + "</td>" +
@@ -744,6 +746,13 @@ function openLeadModal(existing){
         '<div class="row"><label>Company</label><input name="company" value="' + esc(isEdit ? existing.company : "") + '"></div>' +
         '<div class="row"><label>Email</label><input name="email" type="email" value="' + esc(isEdit ? existing.email : "") + '"></div>' +
         '<div class="row"><label>Phone</label><input name="phone" value="' + esc(isEdit ? existing.phone : "") + '"></div>' +
+        '<div class="row"><label>Industry</label><select name="industry">' +
+          '<option value="">None</option>' +
+          INDUSTRIES.map(function(s){
+            var cur = isEdit && existing.sociallinks ? existing.sociallinks.industry : "";
+            return '<option value="' + s + '"' + (cur === s ? " selected" : "") + ">" + s + "</option>";
+          }).join("") +
+        "</select></div>" +
         '<div class="row"><label>Status</label><select name="status">' +
           STATUSES.map(function(s){ return '<option value="' + s + '"' + (isEdit && String(existing.status).toUpperCase() === s ? " selected" : "") + ">" + s + "</option>"; }).join("") +
         "</select></div>" +
@@ -768,6 +777,8 @@ function openLeadModal(existing){
   back.querySelector("#lead-form").addEventListener("submit", function(e){
     e.preventDefault();
     var fd = new FormData(e.target);
+    var ind = String(fd.get("industry") || "");
+    var baseSocial = isEdit && existing.sociallinks ? existing.sociallinks : {};
     var rec = {
       name: String(fd.get("name") || "").trim(),
       company: String(fd.get("company") || "").trim(),
@@ -775,7 +786,8 @@ function openLeadModal(existing){
       phone: String(fd.get("phone") || "").trim(),
       notes: String(fd.get("notes") || "").trim(),
       status: String(fd.get("status") || "NEW"),
-      assignedto: fd.get("assignedto") ? String(fd.get("assignedto")) : (isEdit ? existing.assignedto : session.key)
+      assignedto: fd.get("assignedto") ? String(fd.get("assignedto")) : (isEdit ? existing.assignedto : session.key),
+      sociallinks: Object.assign({}, baseSocial, { industry: ind })
     };
     var p;
     if (isEdit){
@@ -966,6 +978,22 @@ function showAiResult(l, text){
 
 /* ============ PROSPECT FINDER ============ */
 var INDUSTRIES = [
+  "Healthcare",
+  "Construction",
+  "Logistics",
+  "Security",
+  "Hospitality",
+  "Facilities"
+];
+var INDUSTRY_FULL = {
+  "Healthcare": "care and clinical support roles",
+  "Construction": "site and trade professionals",
+  "Logistics": "drivers, warehouse and operations",
+  "Security": "licensed and operational staff",
+  "Hospitality": "front and back-of-house teams",
+  "Facilities": "facilities management"
+};
+var FINDER_INDUSTRIES = [
   "Healthcare (care and clinical support roles)",
   "Construction (site and trade professionals)",
   "Logistics (drivers, warehouse and operations)",
@@ -980,7 +1008,7 @@ function openFinder(){
   var back = openModalShell("Prospect Finder", 
     '<p style="font-size:13px;color:var(--muted);margin-bottom:12px">AI searches the web for real companies in a major industry, finds the point of contact, email, phone, and social links, then adds them straight to your leads.</p>' +
     '<div class="row"><label>Industry</label><div class="ind-chips" id="ind-chips">' +
-      INDUSTRIES.map(function(name){
+      FINDER_INDUSTRIES.map(function(name){
         var short = name.split(" (")[0];
         return '<button type="button" class="ind-chip" data-ind="' + esc(name) + '" title="' + esc(name) + '">' + esc(short) + '</button>';
       }).join("") +
@@ -993,6 +1021,7 @@ function openFinder(){
     '<div class="finder-status hidden" id="finder-status"></div>' +
     '<div class="finder-results" id="finder-results"></div>');
 
+  INDUSTRIES = FINDER_INDUSTRIES; /* finder uses descriptive labels */
   Array.prototype.forEach.call(back.querySelectorAll(".ind-chip"), function(chip){
     chip.addEventListener("click", function(){
       Array.prototype.forEach.call(back.querySelectorAll(".ind-chip"), function(c){ c.classList.remove("active"); });
@@ -1180,6 +1209,13 @@ function renderFinderResults(container){
 }
 
 function addProspectAsLead(p, btn, assignKey){
+  var rules = getRoutingRules(); /* { "Healthcare": "hamail", ... } */
+  /* admin rules override manual dropdown choice when a rule exists for this industry */
+  var finalKey = assignKey || session.key;
+  if (session.role === "admin" && finderIndustry && rules[finderIndustry]){
+    finalKey = rules[finderIndustry];
+  }
+  var ind = finderIndustry ? finderIndustry.split(" (")[0] : "";
   var rec = {
     id: uid(),
     name: p.contactName || p.company || "Unknown Contact",
@@ -1189,9 +1225,9 @@ function addProspectAsLead(p, btn, assignKey){
     notes: [p.contactTitle ? "Contact title: " + p.contactTitle : "", p.notes || "", p.website ? "Website: " + p.website : ""]
       .filter(Boolean).join(" | "),
     status: "NEW",
-    assignedto: assignKey || session.key,
+    assignedto: finalKey,
     createdat: now(),
-    sociallinks: { linkedin: p.linkedin || "", website: p.website || "" }
+    sociallinks: Object.assign({ industry: ind }, p.linkedin ? { linkedin: p.linkedin } : {}, p.website ? { website: p.website } : {})
   };
   sb("leads", { method: "POST", body: rec, prefer: "return=minimal" })
     .then(function(){
@@ -1205,6 +1241,99 @@ function addProspectAsLead(p, btn, assignKey){
       renderAll();
     })
     .catch(function(err){ toast("Add failed: " + err.message, "err"); });
+}
+
+/* ============ INDUSTRY ROUTING + BATCH ASSIGNMENT ============ */
+function getRoutingRules(){
+  try { return JSON.parse(localStorage.getItem("industry_routing") || "{}"); } catch(e){ return {}; }
+}
+function setRoutingRules(rules){
+  localStorage.setItem("industry_routing", JSON.stringify(rules || {}));
+}
+
+function openBatchPanel(){
+  if (session.role !== "admin") return;
+  var rules = getRoutingRules();
+
+  var ruleRows = INDUSTRIES.map(function(ind){
+    var opts = '<option value="">(no auto-routing)</option>' +
+      allUsers.map(function(u){
+        var sel = rules[ind] === u.key ? " selected" : "";
+        return '<option value="' + esc(u.key) + '"' + sel + '>' + esc(u.name || u.key) + '</option>';
+      }).join("");
+    return '<div class="logline" style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+      "<span><strong>" + esc(ind) + "</strong></span>" +
+      '<select data-rule="' + esc(ind) + '" style="width:auto;min-width:170px">' + opts + "</select>" +
+      "</div>";
+  }).join("");
+
+  var assignRows = INDUSTRIES.map(function(ind){
+    var n = allLeads.filter(function(l){ return l.sociallinks && l.sociallinks.industry === ind; }).length;
+    var opts = '<option value="">(leave as is)</option>' +
+      allUsers.map(function(u){
+        return '<option value="' + esc(u.key) + '">' + esc(u.name || u.key) + '</option>';
+      }).join("");
+    return '<div class="logline" style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+      "<span><strong>" + esc(ind) + '</strong> <span class="badge member">' + n + " leads</span></span>" +
+      '<select data-batch="' + esc(ind) + '" style="width:auto;min-width:170px">' + opts + "</select>" +
+      "</div>";
+  }).join("");
+
+  var back = openModalShell("Industry Assignment",
+    '<h2 style="font-size:12px;margin-bottom:8px">Auto-Routing Rules</h2>' +
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">New leads from Prospect Finder in that industry are automatically assigned to this user (overrides the dropdown).</p>' +
+    ruleRows +
+    '<div class="actions" style="justify-content:flex-start"><button type="button" id="btn-save-rules" class="primary">Save Rules</button></div>' +
+    '<h2 style="font-size:12px;margin:18px 0 8px">Batch Assign Existing Leads</h2>' +
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Reassign ALL existing leads of that industry to a user in one go.</p>' +
+    assignRows +
+    '<div class="actions" style="justify-content:flex-start"><button type="button" id="btn-run-batch" class="primary">Apply Batch Assignment</button></div>' +
+    '<div class="finder-status hidden" id="batch-status"></div>');
+
+  back.querySelector("#btn-save-rules").addEventListener("click", function(){
+    var newRules = {};
+    Array.prototype.forEach.call(back.querySelectorAll("[data-rule]"), function(sel){
+      if (sel.value) newRules[sel.getAttribute("data-rule")] = sel.value;
+    });
+    setRoutingRules(newRules);
+    toast("Routing rules saved", "ok");
+  });
+
+  back.querySelector("#btn-run-batch").addEventListener("click", function(){
+    var jobs = [];
+    Array.prototype.forEach.call(back.querySelectorAll("[data-batch]"), function(sel){
+      if (!sel.value) return;
+      var ind = sel.getAttribute("data-batch");
+      var targets = allLeads.filter(function(l){ return l.sociallinks && l.sociallinks.industry === ind && l.assignedto !== sel.value; });
+      targets.forEach(function(l){
+        jobs.push({ id: l.id, to: sel.value, name: l.name, ind: ind });
+      });
+    });
+    if (!jobs.length){ toast("Nothing selected or already assigned", "err"); return; }
+    if (!window.confirm("Reassign " + jobs.length + " lead(s)? This applies immediately.")) return;
+    var status = back.querySelector("#batch-status");
+    status.classList.remove("hidden");
+    status.innerHTML = '<span class="spinner"></span> Reassigning ' + jobs.length + " leads...";
+    /* chunked PATCHes, 20 per request */
+    var chunks = [];
+    for (var i = 0; i < jobs.length; i += 20) chunks.push(jobs.slice(i, i + 20));
+    var done = 0, failed = 0;
+    Promise.all(chunks.map(function(chunk){
+      var to = chunk[0].to;
+      /* one PATCH per target user with an in() filter on ids */
+      var ids = chunk.map(function(j2){ return j2.id; });
+      var qs = "?id=in.(" + ids.join(",") + ")";
+      return sb("leads", { method: "PATCH", qs: qs, body: { assignedto: to }, prefer: "return=minimal" })
+        .then(function(){ done += chunk.length; })
+        .catch(function(){ failed += chunk.length; });
+    })).then(function(){
+      logActivity("Batch assigned " + done + " leads by industry" + (failed ? ", " + failed + " failed" : ""), "", "");
+      if (failed){ toast(done + " reassigned, " + failed + " failed", "err"); }
+      else { toast(done + " leads reassigned", "ok"); }
+      hostClose(back);
+      refreshData();
+    });
+  });
 }
 
 /* ============ ADMIN PANELS ============ */
@@ -1467,6 +1596,7 @@ function bindEvents(){
   $("btn-live-refresh").addEventListener("click", renderLive);
   $("btn-reports-refresh").addEventListener("click", renderReportsView);
   $("btn-users").addEventListener("click", openUsersPanel);
+  $("btn-batch").addEventListener("click", openBatchPanel);
   $("csv-file").addEventListener("change", function(e){
     if (e.target.files && e.target.files[0]) importCSV(e.target.files[0]);
     e.target.value = "";
