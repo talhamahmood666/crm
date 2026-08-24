@@ -92,6 +92,23 @@
   }
   .chip.idle{background:rgba(255,241,207,.9)}
   .clock{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--muted)}
+  .navbtn{
+    cursor:pointer;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+    padding:6px 14px;border:2px solid var(--border);border-radius:var(--radius);background:#fff;
+    font-family:var(--mono)
+  }
+  .navbtn:hover{transform:none;box-shadow:none;background:rgba(37,71,244,.08)}
+  .navbtn.active{background:var(--accent);color:#fff;border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(5,150,105,.18)}
+  .dot.off{background:#9aa3af}
+  .pill-live{
+    font-size:11px;font-weight:800;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;
+    padding:3px 10px;border-radius:999px;border:1.5px solid var(--border)
+  }
+  .pill-live.online{background:var(--pill-won-bg);color:var(--pill-won-c)}
+  .pill-live.away{background:var(--pill-qualified-bg);color:var(--pill-qualified-c)}
+  .pill-live.offline{background:var(--pill-lost-bg);color:var(--pill-lost-c)}
 
   main{padding:20px 22px;max-width:1560px;margin:0 auto}
 
@@ -172,6 +189,34 @@
   .timegrid td,.timegrid th{text-align:right}
   .timegrid td:first-child,.timegrid th:first-child{text-align:left}
 
+  /* prospect finder */
+  .ind-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .ind-chip{
+    padding:8px 14px;border:2px solid var(--border);border-radius:999px;background:#fff;
+    font-weight:700;font-size:13px;cursor:pointer;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em
+  }
+  .ind-chip.active{background:var(--ink);color:#fff;box-shadow:3px 3px 0 rgba(16,16,20,.35)}
+  .finder-results{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+  .prospect{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;
+    border:2px solid var(--border);border-radius:var(--radius);padding:12px 14px;
+    background:rgba(255,255,255,.85)
+  }
+  .prospect.added{opacity:.55;background:rgba(214,245,229,.6)}
+  .prospect .p-main{flex:1;min-width:240px}
+  .prospect .p-name{font-weight:800;font-size:15px}
+  .prospect .p-co{color:var(--accent);font-weight:700;font-size:13px}
+  .prospect .p-meta{font-size:12.5px;color:#333;margin-top:4px;line-height:1.7;word-break:break-word}
+  .prospect .p-meta a{color:var(--accent);text-decoration:none;font-weight:700}
+  .prospect .p-meta a:hover{text-decoration:underline}
+  .p-src{font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px}
+  .finder-status{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:10px}
+  .spinner{
+    display:inline-block;width:12px;height:12px;border:2px solid var(--border);
+    border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
   /* ---- login ---- */
   #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
   .login-card{max-width:380px;width:100%;padding:28px}
@@ -224,8 +269,9 @@
       <span class="clock" id="live-clock"></span>
       <strong id="who-name"></strong>
       <span class="badge" id="who-role"></span>
-      <button id="btn-users" class="small hidden">Users</button>
-      <button id="btn-reports" class="small hidden">Reports</button>
+      <span id="nav-leads" class="navbtn active" data-view="leads">Leads</span>
+      <span id="nav-live" class="navbtn hidden" data-view="live">Live Users</span>
+      <span id="nav-reports" class="navbtn hidden" data-view="reports">Reports</span>
       <button id="btn-settings" class="small hidden">Settings</button>
       <button id="btn-logout" class="small danger">Logout</button>
     </div>
@@ -234,10 +280,12 @@
   <main>
     <div class="stats" id="stats-row"></div>
 
-    <div class="toolbar">
+    <div id="view-leads">
+      <div class="toolbar">
       <button id="btn-add" class="primary">+ Add Lead</button>
       <button id="btn-import">Import CSV</button>
       <button id="btn-export">Export CSV</button>
+      <button id="btn-finder">Prospect Finder</button>
       <input type="file" id="csv-file" accept=".csv,text/csv" class="hidden">
       <span class="spacer"></span>
       <input type="search" id="search" placeholder="Search leads...">
@@ -256,6 +304,32 @@
       </table>
     </div>
     <div id="leads-empty" class="empty hidden">No leads found</div>
+    </div>
+
+    <div id="view-live" class="hidden">
+      <div class="toolbar"><span class="finder-status" style="margin:0">Refreshes every 15s &middot; online = heartbeat in the last 60s</span><span class="spacer"></span><button id="btn-users">Manage Users</button><button id="btn-live-refresh" class="primary">Refresh Now</button></div>
+      <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));max-width:520px;margin-bottom:16px">
+        <div class="stat t-won"><span class="num" id="live-count">-</span><span class="lbl">Online Now</span></div>
+        <div class="stat t-total"><span class="num" id="today-count">-</span><span class="lbl">Active Today</span></div>
+      </div>
+      <div class="tablewrap">
+        <table style="min-width:760px">
+          <thead><tr><th>User</th><th>Status</th><th>Last Seen</th><th>Time Today</th><th>Latest Activity</th></tr></thead>
+          <tbody id="live-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="view-reports" class="hidden">
+      <div class="toolbar"><button id="btn-reports-refresh" class="primary">Refresh Reports</button></div>
+      <h2 style="font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Time Worked (from clock records)</h2>
+      <div class="tablewrap" style="margin-bottom:22px;box-shadow:none">
+        <table style="min-width:560px"><thead><tr><th>Member</th><th>Today</th><th>All time</th></tr></thead>
+        <tbody id="time-body"></tbody></table>
+      </div>
+      <h2 style="font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Activity Log (latest 100)</h2>
+      <div class="card" id="activity-log" style="padding:6px 16px"></div>
+    </div>
   </main>
 </div>
 
@@ -379,7 +453,8 @@ function enterApp(){
   roleEl.classList.toggle("member", session.role !== "admin");
   var isAdmin = session.role === "admin";
   $("btn-users").classList.toggle("hidden", !isAdmin);
-  $("btn-reports").classList.toggle("hidden", !isAdmin);
+  $("nav-live").classList.toggle("hidden", !isAdmin);
+  $("nav-reports").classList.toggle("hidden", !isAdmin);
   $("btn-settings").classList.toggle("hidden", !isAdmin);
   idleLastActive = now();
   clockIn();
@@ -639,6 +714,8 @@ function startTimers(){
   setInterval(updateClockUI, 1000);
   setInterval(renderTimeChip, 60000);
   setInterval(checkAutoLogout, 15000);
+  setInterval(sendHeartbeat, 30000);
+  setInterval(function(){ if (currentView === "live") renderLive(); }, 15000);
   ["mousemove","keydown","click","scroll","touchstart"].forEach(function(ev){
     document.addEventListener(ev, bumpIdle, { passive: true });
   });
@@ -902,6 +979,176 @@ function showAiResult(l, text){
   });
 }
 
+/* ============ PROSPECT FINDER ============ */
+var INDUSTRIES = ["Healthcare","Real Estate","E-commerce / Retail","Financial Services","Manufacturing"];
+var finderIndustry = "";
+var finderProspects = [];
+
+function openFinder(){
+  var back = openModalShell("Prospect Finder", 
+    '<p style="font-size:13px;color:var(--muted);margin-bottom:12px">AI searches the web for real companies in a major industry, finds the point of contact, email, phone, and social links, then adds them straight to your leads.</p>' +
+    '<div class="row"><label>Industry</label><div class="ind-chips" id="ind-chips">' +
+      INDUSTRIES.map(function(name){
+        return '<button type="button" class="ind-chip" data-ind="' + esc(name) + '">' + esc(name) + '</button>';
+      }).join("") +
+    "</div></div>" +
+    '<div class="row"><label>What are you looking for? (optional)</label>' +
+      '<input name="q" id="finder-q" placeholder="e.g. clinics in London with 50+ staff, US logistics SMEs..."></div>' +
+    '<div class="row"><label>How many companies?</label><select id="finder-count">' +
+      '<option>5</option><option selected>10</option><option>15</option></select></div>' +
+    '<div class="actions" style="justify-content:flex-start"><button type="button" id="btn-find" class="primary">Find Prospects</button></div>' +
+    '<div class="finder-status hidden" id="finder-status"></div>' +
+    '<div class="finder-results" id="finder-results"></div>');
+
+  Array.prototype.forEach.call(back.querySelectorAll(".ind-chip"), function(chip){
+    chip.addEventListener("click", function(){
+      Array.prototype.forEach.call(back.querySelectorAll(".ind-chip"), function(c){ c.classList.remove("active"); });
+      chip.classList.add("active");
+      finderIndustry = chip.getAttribute("data-ind");
+    });
+  });
+  back.querySelector("#btn-find").addEventListener("click", function(){ runFind(back); });
+}
+
+function orKeyAndModel(){
+  return {
+    key: localStorage.getItem("or_api_key") || "",
+    model: localStorage.getItem("or_model") || "openai/gpt-4o-mini"
+  };
+}
+
+function runFind(back){
+  if (!finderIndustry){ toast("Pick an industry first", "err"); return; }
+  var cfg = orKeyAndModel();
+  if (!cfg.key){ toast("Set your OpenRouter API key in Settings first", "err"); return; }
+  var extra = back.querySelector("#finder-q").value.trim();
+  var count = parseInt(back.querySelector("#finder-count").value, 10) || 10;
+  var status = back.querySelector("#finder-status");
+  var results = back.querySelector("#finder-results");
+  var btn = back.querySelector("#btn-find");
+  btn.disabled = true;
+  results.innerHTML = "";
+  status.classList.remove("hidden");
+  status.innerHTML = '<span class="spinner"></span> AI is searching the web for ' + esc(finderIndustry) + ' prospects, this can take a minute...';
+
+  /* use a web-search capable free model for grounded results */
+  var searchModel = cfg.model.indexOf(":online") > -1 ? cfg.model : cfg.model + ":online";
+
+  fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + cfg.key,
+      "Content-Type": "application/json",
+      "HTTP-Referer": location.origin || "https://sales-crm.local",
+      "X-Title": "Sales CRM Prospect Finder"
+    },
+    body: JSON.stringify({
+      model: searchModel,
+      messages: [{
+        role: "user",
+        content:
+          "Search the internet and find " + count + " real, currently-operating companies in the " + finderIndustry + " industry" +
+          (extra ? ". Focus on: " + extra : "") +
+          '. For EACH company return exactly these fields as JSON inside an array named "prospects": ' +
+          '{"company":"legal or trading name",' +
+          '"contactName":"best point of contact (founder, owner, sales director, or similar decision maker)",' +
+          '"contactTitle":"their job title",' +
+          '"email":"their real public email or best publicly listed company contact email, empty string if truly not findable",' +
+          '"phone":"publicly listed phone number, empty string if none",' +
+          '"linkedin":"company or contact LinkedIn URL",' +
+          '"website":"company website URL",' +
+          '"notes":"one line on what they do and why they could be a good lead"}.' +
+          " Only include companies you actually found on the web. Never invent emails or phone numbers: leave them empty if not found. " +
+          'Reply with ONLY valid JSON: {"prospects":[...]}. No markdown fences, no commentary.'
+      }]
+    })
+  }).then(function(r){ return r.json().then(function(j){
+      if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+      return j;
+  });}).then(function(j){
+    var txt = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : "{}";
+    txt = txt.replace(/```json|```/g, "").trim();
+    var start = txt.indexOf("{"), end = txt.lastIndexOf("}");
+    var data = JSON.parse(txt.slice(start, end + 1));
+    finderProspects = data.prospects || [];
+    if (!finderProspects.length){
+      status.innerHTML = "No prospects returned. Try a different prompt or industry.";
+      return;
+    }
+    renderFinderResults(results);
+    status.textContent = finderProspects.length + " prospects found. Review and add them to your leads.";
+    logActivity("Ran Prospect Finder (" + finderIndustry + ", " + finderProspects.length + " results)", "", "");
+  }).catch(function(err){
+    status.innerHTML = "";
+    toast("Finder failed: " + err.message, "err");
+    if (String(err.message).indexOf("404") > -1 || String(err.message).toLowerCase().indexOf("no endpoints") > -1){
+      status.textContent = "Your configured model does not support web search (:online). Try model 'openai/gpt-4o-mini:online' or another web-capable model in Settings.";
+    }
+  }).finally(function(){ btn.disabled = false; });
+}
+
+function renderFinderResults(container){
+  container.innerHTML = "";
+  finderProspects.forEach(function(p, i){
+    var div = document.createElement("div");
+    div.className = "prospect";
+    var meta = [];
+    if (p.contactName) meta.push("<strong>" + esc(p.contactName) + "</strong>" + (p.contactTitle ? " <em>(" + esc(p.contactTitle) + ")</em>" : ""));
+    if (p.email) meta.push('Email: <a href="mailto:' + esc(p.email) + '">' + esc(p.email) + "</a>");
+    if (p.phone) meta.push("Phone: " + esc(p.phone));
+    if (p.website) meta.push('<a href="' + esc(p.website) + '" target="_blank" rel="noopener noreferrer">Website</a>');
+    if (p.linkedin) meta.push('<a href="' + esc(p.linkedin) + '" target="_blank" rel="noopener noreferrer">LinkedIn</a>');
+    div.innerHTML =
+      '<div class="p-main">' +
+        '<span class="p-name">' + esc(p.company) + '</span>' +
+        (p.notes ? '<div style="font-size:12.5px;color:#444;margin-top:2px">' + esc(p.notes) + "</div>" : "") +
+        '<div class="p-meta">' + meta.join(" &middot; ") + "</div>" +
+      "</div>" +
+      (session.role === "admin"
+        ? '<select data-prospect-assign="' + i + '" style="width:auto;min-width:140px">' + assignedOptions(session.key) + "</select> "
+        : "") +
+      '<button class="small primary" data-add-prospect="' + i + '">+ Add Lead</button>';
+    container.appendChild(div);
+  });
+
+  Array.prototype.forEach.call(container.querySelectorAll("[data-add-prospect]"), function(btn){
+    btn.addEventListener("click", function(){
+      var i = parseInt(btn.getAttribute("data-add-prospect"), 10);
+      var p = finderProspects[i];
+      var sel = container.querySelector('select[data-prospect-assign="' + i + '"]');
+      addProspectAsLead(p, btn, sel ? sel.value : session.key);
+    });
+  });
+}
+
+function addProspectAsLead(p, btn, assignKey){
+  var rec = {
+    id: uid(),
+    name: p.contactName || p.company || "Unknown Contact",
+    company: p.company || "",
+    email: p.email || "",
+    phone: p.phone || "",
+    notes: [p.contactTitle ? "Contact title: " + p.contactTitle : "", p.notes || "", p.website ? "Website: " + p.website : ""]
+      .filter(Boolean).join(" | "),
+    status: "NEW",
+    assignedto: assignKey || session.key,
+    createdat: now(),
+    sociallinks: { linkedin: p.linkedin || "", website: p.website || "" }
+  };
+  sb("leads", { method: "POST", body: rec, prefer: "return=minimal" })
+    .then(function(){
+      logActivity("Added lead from Prospect Finder", rec.id, rec.name);
+      toast("Added " + rec.name, "ok");
+      btn.disabled = true;
+      btn.textContent = "Added";
+      var card = btn.closest(".prospect");
+      if (card) card.classList.add("added");
+      allLeads.unshift(rec);
+      renderAll();
+    })
+    .catch(function(err){ toast("Add failed: " + err.message, "err"); });
+}
+
 /* ============ ADMIN PANELS ============ */
 function openModalShell(title, innerHtml){
   var host = $("modal-host");
@@ -971,55 +1218,133 @@ function openUsersPanel(){
   });
 }
 
-function openReportsPanel(){
-  if (session.role !== "admin") return;
-  sb("activity", { qs: "?order=timestamp.desc&limit=500" })
+/* ============ VIEWS / TABS ============ */
+var currentView = "leads";
+function switchView(view){
+  if (session.role !== "admin" && view !== "leads") return;
+  currentView = view;
+  ["leads","live","reports"].forEach(function(v){
+    var el = $("view-" + v);
+    if (el) el.classList.toggle("hidden", v !== view);
+    var nav = $("nav-" + v);
+    if (nav) nav.classList.toggle("active", v === view);
+  });
+  if (view === "live") renderLive();
+  if (view === "reports") renderReportsView();
+}
+
+/* ============ LIVE USERS (heartbeat presence) ============ */
+function sendHeartbeat(){
+  if (!session) return;
+  sb("activity", {
+    method: "POST",
+    body: {
+      id: uid(), userkey: session.key, username: session.name || session.key,
+      userrole: session.role, action: "HEARTBEAT", targetid: "", targetname: "", timestamp: now()
+    },
+    prefer: "return=minimal"
+  }).catch(function(){});
+}
+
+function statusFor(lastTs){
+  var mins = (now() - lastTs) / 60000;
+  if (mins <= 1) return ["online", "Online"];
+  if (mins <= 5) return ["away", "Idle"];
+  return ["offline", "Offline"];
+}
+
+function renderLive(){
+  if (!session || session.role !== "admin") return;
+  var startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+  Promise.all([
+    sb("users", { qs: "?limit=500" }),
+    sb("activity", { qs: "?timestamp=gte." + startOfDay.getTime() + "&order=timestamp.asc&limit=1000" })
+  ]).then(function(res){
+    var users = res[0] || [];
+    var acts = res[1] || [];
+
+    /* per user: last heartbeat/any event, worked time today, latest non-heartbeat activity */
+    var info = {};
+    users.forEach(function(u){ info[u.key] = { name: u.name || u.key, last: 0, time: 0, openAt: null, latest: "" }; });
+    acts.forEach(function(a){
+      var i = info[a.userkey];
+      if (!i) return;
+      if (a.timestamp > i.last) i.last = a.timestamp;
+      if (a.action === "CLOCK_IN"){ i.openAt = a.timestamp; }
+      else if (a.action === "CLOCK_OUT" && i.openAt != null){
+        i.time += Math.max(0, a.timestamp - i.openAt); i.openAt = null;
+      }
+      if (a.action !== "HEARTBEAT") i.latest = a.action + (a.targetname ? ": " + a.targetname : "");
+    });
+    Object.keys(info).forEach(function(k){
+      var i = info[k];
+      if (i.openAt != null) i.time += Math.max(0, now() - i.openAt);
+    });
+
+    var online = 0, today = 0;
+    var rows = Object.keys(info).map(function(k){
+      var i = info[k];
+      var st = i.last ? statusFor(i.last) : ["offline", "Never seen"];
+      if (st[0] === "online") online++;
+      if (i.last && (now() - i.last) < 12*3600000) today++;
+      var seen = i.last ? new Date(i.last).toLocaleTimeString() : "-";
+      return "<tr><td><strong>" + esc(i.name) + "</strong></td>" +
+        '<td><span class="pill-live ' + st[0] + '"><span class="dot ' + (st[0] === "online" ? "on" : "off") + '"></span>' + st[1] + "</span></td>" +
+        "<td>" + seen + "</td>" +
+        "<td>" + fmtDur(i.time) + "</td>" +
+        '<td style="max-width:320px;white-space:normal">' + esc(i.latest || "-") + "</td></tr>";
+    }).join("");
+    $("live-body").innerHTML = rows || '<tr><td colspan="5" class="empty">No users</td></tr>';
+    $("live-count").textContent = online;
+    $("today-count").textContent = today;
+  }).catch(function(err){ toast("Live view failed: " + err.message, "err"); });
+}
+
+/* ============ REPORTS VIEW ============ */
+function computeTimeReport(acts){
+  var startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+  var perUser = {};
+  var openMap = {};
+  acts.forEach(function(r){
+    if (!perUser[r.username]) perUser[r.username] = { today: 0, all: 0 };
+    if (r.action === "CLOCK_IN"){ openMap[r.username] = r.timestamp; }
+    else if (r.action === "CLOCK_OUT"){
+      var st = openMap[r.username];
+      if (st != null){
+        perUser[r.username].all += Math.max(0, r.timestamp - st);
+        if (st >= startOfDay.getTime()) perUser[r.username].today += Math.max(0, r.timestamp - st);
+        openMap[r.username] = null;
+      }
+    }
+  });
+  Object.keys(openMap).forEach(function(un){
+    if (openMap[un] != null){
+      perUser[un].all += Math.max(0, now() - openMap[un]);
+      if (openMap[un] >= startOfDay.getTime()) perUser[un].today += Math.max(0, now() - openMap[un]);
+    }
+  });
+  return perUser;
+}
+
+function renderReportsView(){
+  if (!session || session.role !== "admin") return;
+  sb("activity", { qs: "?order=timestamp.asc&limit=1000" })
     .then(function(rows){
       rows = rows || [];
-
-      /* time report per user */
-      var startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-      var perUser = {};
-      var chrono = rows.slice().reverse(); /* oldest -> newest within limit window */
-      var openMap = {};
-      chrono.forEach(function(r){
-        if (!perUser[r.username]) perUser[r.username] = { today: 0, all: 0 };
-        if (r.action === "CLOCK_IN"){ openMap[r.username] = r.timestamp; }
-        else if (r.action === "CLOCK_OUT"){
-          var st = openMap[r.username];
-          if (st != null){
-            perUser[r.username].all += Math.max(0, r.timestamp - st);
-            if (st >= startOfDay.getTime()) perUser[r.username].today += Math.max(0, r.timestamp - st);
-            openMap[r.username] = null;
-          }
-        }
-      });
-      Object.keys(openMap).forEach(function(un){
-        if (openMap[un] != null){
-          perUser[un].all += Math.max(0, now() - openMap[un]);
-          if (openMap[un] >= startOfDay.getTime()) perUser[un].today += Math.max(0, now() - openMap[un]);
-        }
-      });
-
-      var timeRows = Object.keys(perUser).sort().map(function(un){
+      var perUser = computeTimeReport(rows.slice().filter(function(a){
+        return a.action === "CLOCK_IN" || a.action === "CLOCK_OUT";
+      }));
+      $("time-body").innerHTML = Object.keys(perUser).sort().map(function(un){
         return "<tr><td><strong>" + esc(un) + "</strong></td><td>" + fmtDur(perUser[un].today) + "</td><td>" + fmtDur(perUser[un].all) + "</td></tr>";
-      }).join("");
+      }).join("") || '<tr><td colspan="3" class="empty">No clock data yet</td></tr>';
 
-      var actRows = rows.slice(0, 80).filter(function(a){ return a.action.indexOf("CLOCK_") !== 0; }).map(function(a){
+      var recent = rows.slice(-100).reverse().filter(function(a){ return a.action.indexOf("CLOCK_") !== 0 && a.action !== "HEARTBEAT"; });
+      $("activity-log").innerHTML = recent.map(function(a){
         return '<div class="logline"><span class="when">' + new Date(a.timestamp).toLocaleString() + "</span>" +
-          '<span class="who">' + esc(a.username) + '</span>: ' +
+          '<span class="who">' + esc(a.username) + "</span>: " +
           esc(a.action) + (a.targetname ? ' &mdash; <em>' + esc(a.targetname) + "</em>" : "") +
           "</div>";
       }).join("") || '<div class="empty">No activity yet</div>';
-
-      var html =
-        '<h2 style="margin-top:0;font-size:13px">Time Worked (from clock records)</h2>' +
-        '<table class="timegrid" style="min-width:0;margin-bottom:16px"><thead><tr><th>Member</th><th>Today</th><th>All time</th></tr></thead><tbody>' +
-        (timeRows || '<tr><td colspan="3" class="empty">No clock data yet</td></tr>') +
-        "</tbody></table>" +
-        '<h2 style="font-size:13px">Recent Activity Log</h2>' + actRows;
-
-      openModalShell("Reports", html);
     })
     .catch(function(err){ toast("Could not load reports: " + err.message, "err"); });
 }
@@ -1062,12 +1387,18 @@ function bindEvents(){
   $("btn-export").addEventListener("click", exportCSV);
   $("btn-refresh").addEventListener("click", refreshData);
   $("btn-import").addEventListener("click", function(){ $("csv-file").click(); });
+  $("btn-finder").addEventListener("click", openFinder);
+  ["leads","live","reports"].forEach(function(v){
+    var nav = $("nav-" + v);
+    if (nav) nav.addEventListener("click", function(){ switchView(v); });
+  });
+  $("btn-live-refresh").addEventListener("click", renderLive);
+  $("btn-reports-refresh").addEventListener("click", renderReportsView);
+  $("btn-users").addEventListener("click", openUsersPanel);
   $("csv-file").addEventListener("change", function(e){
     if (e.target.files && e.target.files[0]) importCSV(e.target.files[0]);
     e.target.value = "";
   });
-  $("btn-users").addEventListener("click", openUsersPanel);
-  $("btn-reports").addEventListener("click", openReportsPanel);
   $("btn-settings").addEventListener("click", openSettingsPanel);
 
   $("search").addEventListener("input", function(e){ searchQ = e.target.value.trim().toLowerCase(); renderTable(); });
