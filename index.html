@@ -95,8 +95,8 @@
     <input type="email" id="loginEmail" autocomplete="email">
     <label>Password</label>
     <input type="password" id="loginPassword" autocomplete="current-password">
-    <button class="primary" onclick="doLogin()">Sign In</button>
-    <button style="margin-top:10px; width:100%; font-size:11px; color:var(--muted)" onclick="openCloudSetup()">Configure Database</button>
+    <button id="btn-login" class="primary">Sign In</button>
+    <button id="btn-setup" style="margin-top:10px; width:100%; font-size:11px; color:var(--muted)">Configure Database</button>
   </div>
 </div>
 
@@ -107,7 +107,7 @@
     <div class="user">
       <span id="userName"></span>
       <span id="userRole" class="badge"></span>
-      <button onclick="logout()">Logout</button>
+      <button id="btn-logout">Logout</button>
     </div>
   </header>
 
@@ -118,16 +118,16 @@
       <div class="card">
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-            <button class="primary" onclick="openAddModal()">+ Add Lead</button>
+            <button id="btn-add-lead" class="primary">+ Add Lead</button>
             <label class="button-like" style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);padding:8px 14px;border-radius:6px;background:#fff;cursor:pointer">
               Import CSV
-              <input type="file" id="csvFile" accept=".csv" onchange="importCSV(this)" style="display:none">
+              <input type="file" id="csvFile" accept=".csv" style="display:none">
             </label>
-            <button onclick="exportCSV()">Export CSV</button>
-            <button onclick="openUsersPanel()">Manage Users</button>
-            <button onclick="showReports()">Reports</button>
+            <button id="btn-export-csv">Export CSV</button>
+            <button id="btn-manage-users">Manage Users</button>
+            <button id="btn-reports">Reports</button>
           </div>
-          <button onclick="toggleSettings()">Settings</button>
+          <button id="btn-toggle-settings">Settings</button>
         </div>
         <div id="settingsPanel" class="hidden settings-section">
           <h3>Cloud Settings (Supabase)</h3>
@@ -159,7 +159,7 @@
             </select>
             <input type="text" id="orModelCustom" class="hidden" placeholder="e.g. meta-llama/llama-3.1-8b-instruct:free">
           </div>
-          <button class="primary" onclick="saveSettings()">Save</button>
+          <button id="btn-save-settings" class="primary">Save</button>
         </div>
       </div>
     </div>
@@ -167,21 +167,21 @@
     <div id="reportPanel" class="hidden card report-section">
       <div class="section-title">User Activity Reports</div>
       <div class="report-tabs">
-        <button class="report-tab active" onclick="setReportRange('4h',this)">Last 4 hours</button>
-        <button class="report-tab" onclick="setReportRange('24h',this)">Last 24 hours</button>
-        <button class="report-tab" onclick="setReportRange('all',this)">All time</button>
+        <button class="report-tab active" data-range="4h">Last 4 hours</button>
+        <button class="report-tab" data-range="24h">Last 24 hours</button>
+        <button class="report-tab" data-range="all">All time</button>
       </div>
       <div id="reportContent"></div>
       <div style="margin-top:10px">
-        <button class="primary" onclick="downloadReportPdf()">Download PDF</button>
-        <button class="primary" onclick="printReport()">Print / Save as PDF</button>
+        <button id="btn-dl-report" class="primary">Download PDF</button>
+        <button id="btn-print-report" class="primary">Print / Save as PDF</button>
       </div>
     </div>
 
     <div class="toolbar card">
-      <select id="filterStatus" onchange="render()"><option value="">All Statuses</option></select>
-      <select id="filterMember" onchange="render()"><option value="">All Members</option></select>
-      <input type="text" id="filterSearch" placeholder="Search name, company, email" oninput="render()">
+      <select id="filterStatus"><option value="">All Statuses</option></select>
+      <select id="filterMember"><option value="">All Members</option></select>
+      <input type="text" id="filterSearch" placeholder="Search name, company, email">
     </div>
 
     <div style="overflow-x:auto">
@@ -197,617 +197,670 @@
 <div id="toast" class="toast"></div>
 
 <script>
-/* ===== Data layer (Supabase REST API) ===== */
-const STATUSES = ['NEW','CONTACTED','QUALIFIED','PROPOSAL','WON','LOST'];
-const SETTINGS_STORE = 'crm_settings_v1';
-let session = null;
+(function() {
+  console.log("CRM Initialization started...");
 
-function esc(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
+  // 1. Clear legacy storage to prevent crashes
+  localStorage.removeItem('crm_leads_v1');
+  localStorage.removeItem('crm_users_v1');
+  localStorage.removeItem('crm_activity_v1');
 
-async function api(table, method='GET', query='', body=null) {
-  const settings = loadSettings();
-  if(!settings.sbUrl || !settings.sbKey) throw new Error('Cloud settings not configured. Use "Configure Database" on login screen.');
+  const STATUSES = ['NEW','CONTACTED','QUALIFIED','PROPOSAL','WON','LOST'];
+  const SETTINGS_STORE = 'crm_settings_v1';
+  let session = null;
 
-  const url = `${settings.sbUrl}/rest/v1/${table}${query}`;
-  const options = {
-    method,
-    headers: {
-      'apikey': settings.sbKey,
-      'Authorization': `Bearer ${settings.sbKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
+  function esc(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
+
+  async function api(table, method='GET', query='', body=null) {
+    const settings = loadSettings();
+    if(!settings.sbUrl || !settings.sbKey) throw new Error('Cloud settings not configured. Use "Configure Database" on login screen.');
+    const url = `${settings.sbUrl}/rest/v1/${table}${query}`;
+    const options = {
+      method,
+      headers: {
+        'apikey': settings.sbKey,
+        'Authorization': `Bearer ${settings.sbKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    };
+    if(body) options.body = JSON.stringify(body);
+    const res = await fetch(url, options);
+    if(!res.ok) {
+      const errText = await res.text();
+      throw new Error(`API Error: ${res.status} ${errText}`);
     }
-  };
-  if(body) options.body = JSON.stringify(body);
-
-  const res = await fetch(url, options);
-  if(!res.ok) {
-    const errText = await res.text();
-    throw new Error(`API Error: ${res.status} ${errText}`);
+    return res.json();
   }
-  return res.json();
-}
 
-function loadSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_STORE)||'{}'); }catch(e){ return {}; } }
-function saveSettingsObj(s){ localStorage.setItem(SETTINGS_STORE, JSON.stringify(s)); }
-function uid(){ return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
+  function loadSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_STORE)||'{}'); }catch(e){ return {}; } }
+  function saveSettingsObj(s){ localStorage.setItem(SETTINGS_STORE, JSON.stringify(s)); }
+  function uid(){ return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
 
-/* ===== Auth ===== */
-async function doLogin(){
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pw = document.getElementById('loginPassword').value;
-  if(!email || !pw) { toast('Fill all fields'); return; }
-  try {
-    const users = await api('users', 'GET', `?email=eq.${email}`);
-    const user = users[0];
-    if(!user || user.password !== pw){ toast('Invalid credentials'); return; }
-    session = { key: user.key, email: user.email, name: user.name, role: user.role };
-    sessionStorage.setItem('crm_session', JSON.stringify(session));
-    showApp();
-  } catch(e) {
-    toast(e.message);
+  function toast(msg){
+    const el=document.getElementById('toast');
+    if(!el) return;
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(el._t);
+    el._t=setTimeout(()=>el.classList.remove('show'),2200);
   }
-}
 
-function logout(){
-  session = null;
-  sessionStorage.removeItem('crm_session');
-  location.reload();
-}
-
-function restoreSession(){
-  const raw = sessionStorage.getItem('crm_session');
-  if(raw){ try{ session = JSON.parse(raw); }catch(e){ session=null; } }
-}
-
-async function showApp(){
-  document.getElementById('loginView').classList.add('hidden');
-  document.getElementById('appView').classList.remove('hidden');
-  document.getElementById('userName').textContent = session.name;
-  document.getElementById('userRole').textContent = session.role;
-  if(session.role==='admin') document.getElementById('adminTools').classList.remove('hidden');
-  await render();
-}
-
-/* ===== UI helpers ===== */
-function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2200); }
-
-function memberSelectHtml(lead, onlyOwn=false, members=[]){
-  const opts = ['', ...(onlyOwn ? [] : ['__unassigned']), ...members.map(m=>m.key)];
-  let html = `<select onchange="assignLead('${lead.id}', this.value)" ${onlyOwn?'disabled':''}>`;
-  opts.forEach(m=>{
-    const member = members.find(x=>x.key===m);
-    const label = m ? (member ? member.name : m) : 'Unassigned';
-    const sel = lead.assignedTo === m ? ' selected' : '';
-    html += `<option value="${esc(m)}"${sel}>${esc(label)}</option>`;
-  });
-  html += '</select>';
-  return html;
-}
-
-function socialButtons(lead){
-  const name = esc(lead.name||'');
-  const comp = esc(lead.company||'');
-  const q = encodeURIComponent((comp?name+' '+comp:name));
-  const q2 = encodeURIComponent((comp?name+' '+comp:name));
-  let html = `<button class="soc linkedin" title="LinkedIn" onclick="window.open('https://www.linkedin.com/search/results/all/?keywords=${q}','_blank')">in</button>`;
-  html += `<button class="soc x" title="X" onclick="window.open('https://x.com/search?q=${q2}','_blank')">X</button>`;
-  html += `<button class="soc facebook" title="Facebook" onclick="window.open('https://www.facebook.com/search/top?q=${q}','_blank')">f</button>`;
-  html += `<button class="soc google" title="Google" onclick="window.open('https://www.google.com/search?q=${q2}+linkedin+OR+twitter','_blank')">G</button>`;
-  if(lead.socialLinks){
-    if(lead.socialLinks.linkedin) html += ` <a class="soc-link" href="${esc(lead.socialLinks.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`;
-    if(lead.socialLinks.twitter) html += ` <a class="soc-link" href="${esc(lead.socialLinks.twitter)}" target="_blank" rel="noopener">X</a>`;
-    if(lead.socialLinks.facebook) html += ` <a class="soc-link" href="${esc(lead.socialLinks.facebook)}" target="_blank" rel="noopener">Facebook</a>`;
+  async function doLogin(){
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const pw = document.getElementById('loginPassword').value;
+    if(!email || !pw) { toast('Fill all fields'); return; }
+    try {
+      const users = await api('users', 'GET', `?email=eq.${email}`);
+      const user = users[0];
+      if(!user || user.password !== pw){ toast('Invalid credentials'); return; }
+      session = { key: user.key, email: user.email, name: user.name, role: user.role };
+      sessionStorage.setItem('crm_session', JSON.stringify(session));
+      showApp();
+    } catch(e) {
+      toast(e.message);
+    }
   }
-  html += ` <button class="soc" title="Edit social links" onclick="editSocial('${lead.id}')">Edit</button>`;
-  return html;
-}
 
-/* ===== Actions ===== */
-async function assignLead(id, val){
-  try {
-    await api('leads', 'PATCH', `?id=eq.${id}`, { assignedTo: val || null });
-    logAction('Assignment updated', id, 'Lead');
-    toast('Assignment saved');
-    await render();
-  } catch(e) { toast(e.message); }
-}
-
-async function deleteLead(id){
-  if(!confirm('Delete this lead?')) return;
-  try {
-    await api('leads', 'DELETE', `?id=eq.${id}`);
-    logAction('Lead deleted', id, 'Lead');
-    await render();
-    toast('Lead deleted');
-  } catch(e) { toast(e.message); }
-}
-
-async function changeStatus(id, newStatus){
-  try {
-    await api('leads', 'PATCH', `?id=eq.${id}`, { status: newStatus });
-    logAction('Status changed', id, 'Lead -> '+newStatus);
-    await render();
-    toast('Status updated');
-  } catch(e) { toast(e.message); }
-}
-
-async function editSocial(id){
-  const leads = await api('leads', 'GET', `?id=eq.${id}`);
-  const lead = leads[0];
-  if(!lead) return;
-  const html = `<div class="modal" onclick="event.stopPropagation()">
-    <h3>Edit Social Links</h3>
-    <label>LinkedIn URL</label><input id="sl-linkedin" value="${esc(lead.socialLinks&&lead.socialLinks.linkedin)}">
-    <label>X URL</label><input id="sl-twitter" value="${esc(lead.socialLinks&&lead.socialLinks.twitter)}">
-    <label>Facebook URL</label><input id="sl-facebook" value="${esc(lead.socialLinks&&lead.socialLinks.facebook)}">
-    <div class="actions">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="primary" onclick="saveSocial('${id}')">Save</button>
-    </div>
-  </div>`;
-  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
-  document.body.appendChild(bg);
-}
-
-async function saveSocial(id){
-  const links = {
-    linkedin: document.getElementById('sl-linkedin').value.trim()||null,
-    twitter: document.getElementById('sl-twitter').value.trim()||null,
-    facebook: document.getElementById('sl-facebook').value.trim()||null
-  };
-  try {
-    await api('leads', 'PATCH', `?id=eq.${id}`, { socialLinks: links });
-    closeModal(); await render(); toast('Social links saved');
-  } catch(e) { toast(e.message); }
-}
-
-function closeModal(){ const m=document.querySelector('.modal-bg'); if(m) m.remove(); }
-
-/* ===== Add lead modal ===== */
-function openAddModal(){
-  const html = `<div class="modal" onclick="event.stopPropagation()">
-    <h3>Add Lead</h3>
-    <label>Name *</label><input id="a-name">
-    <label>Company</label><input id="a-company">
-    <label>Email</label><input id="a-email" type="email">
-    <label>Phone</label><input id="a-phone">
-    <label>Notes</label><textarea id="a-notes" rows="3"></textarea>
-    <label>Status</label><select id="a-status">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
-    <label>Assigned To</label><select id="a-assign"><option value="">Unassigned</option></select>
-    <div class="actions">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="primary" onclick="saveNewLead()">Save</button>
-    </div>
-  </div>`;
-  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
-  document.body.appendChild(bg);
-  loadMemberDropdown('a-assign');
-}
-
-async function loadMemberDropdown(id){
-  try {
-    const users = await api('users', 'GET');
-    const members = users.filter(u=>u.role==='member');
-    const sel = document.getElementById(id);
-    if(sel){
-      sel.innerHTML = '<option value="">Unassigned</option>' + members.map(m=>`<option value="${esc(m.key)}">${esc(m.name)}</option>`).join('');
-    }
-  } catch(e) { console.error(e); }
-}
-
-async function saveNewLead(){
-  const name = document.getElementById('a-name').value.trim();
-  if(!name){ toast('Name is required'); return; }
-  const lead = {
-    id: uid(),
-    name,
-    company: document.getElementById('a-company').value.trim(),
-    email: document.getElementById('a-email').value.trim(),
-    phone: document.getElementById('a-phone').value.trim(),
-    notes: document.getElementById('a-notes').value.trim(),
-    status: document.getElementById('a-status').value,
-    assignedTo: document.getElementById('a-assign').value || null,
-    createdAt: Date.now(),
-    socialLinks: null
-  };
-  try {
-    await api('leads', 'POST', '', lead);
-    logAction('Lead added', lead.id, lead.name);
-    closeModal(); await render(); toast('Lead added');
-  } catch(e) { toast(e.message); }
-}
-
-/* ===== CSV import ===== */
-async function importCSV(input){
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e){
-    const text = e.target.result;
-    const rows = parseCSV(text);
-    let imported=0, skipped=0;
-    for(const r of rows){
-      const name = (r.name||'').trim();
-      if(!name){ skipped++; continue; }
-      try {
-        await api('leads', 'POST', '', {
-          id: uid(), name, company: (r.company||'').trim(), email: (r.email||'').trim(), phone: (r.phone||'').trim(), notes: (r.notes||'').trim(),
-          status: normalizeStatus((r.status||'').trim())||'NEW', assignedTo: r.assignedTo||null, createdAt: Date.now(), socialLinks: null
-        });
-        imported++;
-      } catch(err) { skipped++; }
-    }
-    logAction('CSV imported', null, imported+' imported, '+skipped+' skipped');
-    await render();
-    toast(imported+' imported, '+skipped+' skipped');
-    input.value = '';
-  };
-  reader.readAsText(file);
-}
-function parseCSV(text){
-  const rows = []; let cur=[]; let cell=''; let inQ=false; let i=0;
-  while(i<text.length){
-    const ch = text[i];
-    if(inQ){
-      if(ch==='"' && text[i+1]==='"'){ cell+='"'; i+=2; continue; }
-      if(ch==='"'){ inQ=false; i++; continue; }
-      cell+=ch; i++; continue;
-    }
-    if(ch==='"'){ inQ=true; i++; continue; }
-    if(ch===','){ cur.push(cell.trim()); cell=''; i++; continue; }
-    if(ch==='\n' || (ch==='\r' && text[i+1]==='\n')){
-      cur.push(cell.trim()); cell='';
-      if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur));
-      cur=[]; i+= (ch==='\r'?2:1); continue;
-    }
-    cell+=ch; i++;
+  function logout(){
+    session = null;
+    sessionStorage.removeItem('crm_session');
+    location.reload();
   }
-  if(cell||cur.length) { cur.push(cell.trim()); if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur)); }
-  return rows;
-}
-function objectify(arr){
-  const keys = ['name','company','email','phone','notes','status','assignedTo'];
-  const obj = {};
-  keys.forEach((k,idx)=>{ if(idx<arr.length) obj[k]=arr[idx]; });
-  return obj;
-}
-function normalizeStatus(s){ const up = s.toUpperCase(); return STATUSES.includes(up)?up:null; }
 
-/* ===== Export CSV ===== */
-async function exportCSV(){
-  const leads = await getVisibleLeads();
-  if(!leads.length){ toast('No leads to export'); return; }
-  const header = 'name,company,email,phone,notes,status,assignedTo,linkedin,twitter,facebook';
-  const rows = leads.map(l=>{
-    const r = [csvEscape(l.name), csvEscape(l.company), csvEscape(l.email), csvEscape(l.phone), csvEscape(l.notes), l.status||'', l.assignedTo||''];
-    const sl = l.socialLinks||{};
-    r.push(csvEscape(sl.linkedin||''), csvEscape(sl.twitter||''), csvEscape(sl.facebook||''));
-    return r.join(',');
-  });
-  const csv = [header, ...rows].join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'leads.csv'; a.click();
-  toast('CSV exported');
-}
-function csvEscape(s){ if(s==null) return ''; const str=String(s); if(str.includes(',')||str.includes('"')||str.includes('\n')) return '"'+str.replace(/"/g,'""')+'"'; return str; }
+  async function showApp(){
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+    document.getElementById('userName').textContent = session.name;
+    document.getElementById('userRole').textContent = session.role;
+    if(session.role==='admin') document.getElementById('adminTools').classList.remove('hidden');
+    await render();
+  }
 
-/* ===== Settings ===== */
-function toggleSettings(){ const p=document.getElementById('settingsPanel'); p.classList.toggle('hidden'); }
-function saveSettings(){
-  const s = {
-    sbUrl: document.getElementById('sbUrl').value.trim(),
-    sbKey: document.getElementById('sbKey').value.trim(),
-    orKey: document.getElementById('orKey').value.trim(),
-    model: document.getElementById('orModelSelect').value === 'custom' ? document.getElementById('orModelCustom').value.trim() : document.getElementById('orModelSelect').value
-  };
-  saveSettingsObj(s); toast('Settings saved');
-}
-
-function openCloudSetup(){
-  const html = `<div class="modal" onclick="event.stopPropagation()">
-    <h3>Connect to Supabase</h3>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Enter your project details to enable login and data sync.</p>
-    <label>Supabase URL</label><input id="setup-url" placeholder="https://xyz.supabase.co">
-    <label>Anon Key</label><input type="password" id="setup-key" placeholder="eyJhbG... ">
-    <div class="actions">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="primary" onclick="saveCloudSetup()">Connect</button>
-    </div>
-  </div>`;
-  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
-  document.body.appendChild(bg);
-}
-
-function saveCloudSetup(){
-  const url = document.getElementById('setup-url').value.trim();
-  const key = document.getElementById('setup-key').value.trim();
-  if(!url || !key){ toast('Both fields are required'); return; }
-  const settings = loadSettings();
-  settings.sbUrl = url;
-  settings.sbKey = key;
-  saveSettingsObj(settings);
-  closeModal();
-  toast('Connected! You can now log in.');
-}
-
-/* ===== Users management ===== */
-async function openUsersPanel(){
-  try {
-    const users = await api('users', 'GET');
-    const members = users.filter(u=>u.role==='member');
-    const bg = document.createElement('div'); bg.className='modal-bg';
-    bg.innerHTML = `<div class="modal" onclick="event.stopPropagation()">
-      <h3>Manage Users</h3>
-      <table style="width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px">
-        <thead><tr><th>Name</th><th>Email</th><th>Password</th><th></th></tr></thead>
-        <tbody>
-          ${members.map(u=>`<tr>
-            <td>${esc(u.name)}</td>
-            <td>${esc(u.email)}</td>
-            <td>${esc(u.password)}</td>
-            <td><button class="danger" onclick="deleteMember('${esc(u.key)}')">Delete</button></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      <h4>Add Member</h4>
-      <label>Name</label><input id="un-name">
-      <label>Email</label><input id="un-email" type="email">
-      <label>Password</label><input id="un-password" type="text">
+  function openCloudSetup(){
+    const html = `<div class="modal" onclick="event.stopPropagation()">
+      <h3>Connect to Supabase</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Enter your project details to enable login and data sync.</p>
+      <label>Supabase URL</label><input id="setup-url" placeholder="https://xyz.supabase.co">
+      <label>Anon Key</label><input type="password" id="setup-key" placeholder="eyJhbG... ">
       <div class="actions">
-        <button onclick="closeModal()">Close</button>
-        <button class="primary" onclick="addMember()">Add</button>
+        <button id="btn-setup-cancel">Cancel</button>
+        <button id="btn-setup-save" class="primary">Connect</button>
+      </div>
+    </div>`;
+    const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
+    document.body.appendChild(bg);
+    document.getElementById('btn-setup-cancel').onclick = closeModal;
+    document.getElementById('btn-setup-save').onclick = saveCloudSetup;
+  }
+
+  function saveCloudSetup(){
+    const url = document.getElementById('setup-url').value.trim();
+    const key = document.getElementById('setup-key').value.trim();
+    if(!url || !key){ toast('Both fields are required'); return; }
+    const settings = loadSettings();
+    settings.sbUrl = url;
+    settings.sbKey = key;
+    saveSettingsObj(settings);
+    closeModal();
+    toast('Connected! You can now log in.');
+  }
+
+  function closeModal(){ const m=document.querySelector('.modal-bg'); if(m) m.remove(); }
+
+  async function assignLead(id, val){
+    try {
+      await api('leads', 'PATCH', `?id=eq.${id}`, { assignedTo: val || null });
+      await render();
+      toast('Assignment saved');
+    } catch(e) { toast(e.message); }
+  }
+
+  async function deleteLead(id){
+    if(!confirm('Delete this lead?')) return;
+    try {
+      await api('leads', 'DELETE', `?id=eq.${id}`);
+      await render();
+      toast('Lead deleted');
+    } catch(e) { toast(e.message); }
+  }
+
+  async function changeStatus(id, newStatus){
+    try {
+      await api('leads', 'PATCH', `?id=eq.${id}`, { status: newStatus });
+      await render();
+      toast('Status updated');
+    } catch(e) { toast(e.message); }
+  }
+
+  function memberSelectHtml(lead, onlyOwn=false, members=[]){
+    const opts = ['', ...(onlyOwn ? [] : ['__unassigned']), ...members.map(m=>m.key)];
+    let html = `<select onchange="window.assignLead('${lead.id}', this.value)" ${onlyOwn?'disabled':''}>`;
+    opts.forEach(m=>{
+      const member = members.find(x=>x.key===m);
+      const label = m ? (member ? member.name : m) : 'Unassigned';
+      const sel = lead.assignedTo === m ? ' selected' : '';
+      html += `<option value="${esc(m)}"${sel}>${esc(label)}</option>`;
+    });
+    html += '</select>';
+    return html;
+  }
+
+  function socialButtons(lead){
+    const name = esc(lead.name||'');
+    const comp = esc(lead.company||'');
+    const q = encodeURIComponent((comp?name+' '+comp:name));
+    const q2 = encodeURIComponent((comp?name+' '+comp:name));
+    let html = `<button class="soc linkedin" title="LinkedIn" onclick="window.open('https://www.linkedin.com/search/results/all/?keywords=${q}','_blank')">in</button>`;
+    html += `<button class="soc x" title="X" onclick="window.open('https://x.com/search?q=${q2}','_blank')">X</button>`;
+    html += `<button class="soc facebook" title="Facebook" onclick="window.open('https://www.facebook.com/search/top?q=${q}','_blank')">f</button>`;
+    html += `<button class="soc google" title="Google" onclick="window.open('https://www.google.com/search?q=${q2}+linkedin+OR+twitter','_blank')">G</button>`;
+    if(lead.socialLinks){
+      if(lead.socialLinks.linkedin) html += ` <a class="soc-link" href="${esc(lead.socialLinks.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`;
+      if(lead.socialLinks.twitter) html += ` <a class="soc-link" href="${esc(lead.socialLinks.twitter)}" target="_blank" rel="noopener">X</a>`;
+      if(lead.socialLinks.facebook) html += ` <a class="soc-link" href="${esc(lead.socialLinks.facebook)}" target="_blank" rel="noopener">Facebook</a>`;
+    }
+    html += ` <button class="soc" title="Edit social links" onclick="window.editSocial('${lead.id}')">Edit</button>`;
+    return html;
+  }
+
+  async function editSocial(id){
+    const leads = await api('leads', 'GET', `?id=eq.${id}`);
+    const lead = leads[0]; if(!lead) return;
+    const html = `<div class="modal" onclick="event.stopPropagation()">
+      <h3>Edit Social Links</h3>
+      <label>LinkedIn URL</label><input id="sl-linkedin" value="${esc(lead.socialLinks&&lead.socialLinks.linkedin)}">
+      <label>X URL</label><input id="sl-twitter" value="${esc(lead.socialLinks&&lead.socialLinks.twitter)}">
+      <label>Facebook URL</label><input id="sl-facebook" value="${esc(lead.socialLinks&&lead.socialLinks.facebook)}">
+      <div class="actions">
+        <button id="btn-soc-cancel">Cancel</button>
+        <button id="btn-soc-save" class="primary">Save</button>
+      </div>
+    </div>`;
+    const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
+    document.body.appendChild(bg);
+    document.getElementById('btn-soc-cancel').onclick = closeModal;
+    document.getElementById('btn-soc-save').onclick = () => saveSocial(id);
+  }
+
+  async function saveSocial(id){
+    const links = {
+      linkedin: document.getElementById('sl-linkedin').value.trim()||null,
+      twitter: document.getElementById('sl-twitter').value.trim()||null,
+      facebook: document.getElementById('sl-facebook').value.trim()||null
+    };
+    try {
+      await api('leads', 'PATCH', `?id=eq.${id}`, { socialLinks: links });
+      closeModal(); await render(); toast('Social links saved');
+    } catch(e) { toast(e.message); }
+  }
+
+  function openAddModal(){
+    const html = `<div class="modal" onclick="event.stopPropagation()">
+      <h3>Add Lead</h3>
+      <label>Name *</label><input id="a-name">
+      <label>Company</label><input id="a-company">
+      <label>Email</label><input id="a-email" type="email">
+      <label>Phone</label><input id="a-phone">
+      <label>Notes</label><textarea id="a-notes" rows="3"></textarea>
+      <label>Status</label><select id="a-status">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+      <label>Assigned To</label><select id="a-assign"><option value="">Unassigned</option></select>
+      <div class="actions">
+        <button id="btn-add-cancel">Cancel</button>
+        <button id="btn-add-save" class="primary">Save</button>
+      </div>
+    </div>`;
+    const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
+    document.body.appendChild(bg);
+    document.getElementById('btn-add-cancel').onclick = closeModal;
+    document.getElementById('btn-add-save').onclick = saveNewLead;
+    loadMemberDropdown('a-assign');
+  }
+
+  async function loadMemberDropdown(id){
+    try {
+      const users = await api('users', 'GET');
+      const members = users.filter(u=>u.role==='member');
+      const sel = document.getElementById(id);
+      if(sel){
+        sel.innerHTML = '<option value="">Unassigned</option>' + members.map(m=>`<option value="${esc(m.key)}">${esc(m.name)}</option>`).join('');
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  async function saveNewLead(){
+    const name = document.getElementById('a-name').value.trim();
+    if(!name){ toast('Name is required'); return; }
+    const lead = {
+      id: uid(),
+      name,
+      company: document.getElementById('a-company').value.trim(),
+      email: document.getElementById('a-email').value.trim(),
+      phone: document.getElementById('a-phone').value.trim(),
+      notes: document.getElementById('a-notes').value.trim(),
+      status: document.getElementById('a-status').value,
+      assignedTo: document.getElementById('a-assign').value || null,
+      createdAt: Date.now(),
+      socialLinks: null
+    };
+    try {
+      await api('leads', 'POST', '', lead);
+      closeModal(); await render(); toast('Lead added');
+    } catch(e) { toast(e.message); }
+  }
+
+  async function importCSV(input){
+    const file = input.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e){
+      const text = e.target.result;
+      const rows = parseCSV(text);
+      let imported=0, skipped=0;
+      for(const r of rows){
+        const name = (r.name||'').trim();
+        if(!name){ skipped++; continue; }
+        try {
+          await api('leads', 'POST', '', {
+            id: uid(), name, company: (r.company||'').trim(), email: (r.email||'').trim(), phone: (r.phone||'').trim(), notes: (r.notes||'').trim(),
+            status: normalizeStatus((r.status||'').trim())||'NEW', assignedTo: r.assignedTo||null, createdAt: Date.now(), socialLinks: null
+          });
+          imported++;
+        } catch(err) { skipped++; }
+      }
+      await render();
+      toast(imported+' imported, '+skipped+' skipped');
+      input.value = '';
+    };
+    reader.readAsText(file);
+  }
+  function parseCSV(text){
+    const rows = []; let cur=[]; let cell=''; let inQ=false; let i=0;
+    while(i<text.length){
+      const ch = text[i];
+      if(inQ){
+        if(ch==='"' && text[i+1]==='"'){ cell+='"'; i+=2; continue; }
+        if(ch==='"'){ inQ=false; i++; continue; }
+        cell+=ch; i++; continue;
+      }
+      if(ch==='"'){ inQ=true; i++; continue; }
+      if(ch===','){ cur.push(cell.trim()); cell=''; i++; continue; }
+      if(ch==='\n' || (ch==='\r' && text[i+1]==='\n')){
+        cur.push(cell.trim()); cell='';
+        if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur));
+        cur=[]; i+= (ch==='\r'?2:1); continue;
+      }
+      cell+=ch; i++;
+    }
+    if(cell||cur.length) { cur.push(cell.trim()); if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur)); }
+    return rows;
+  }
+  function objectify(arr){
+    const keys = ['name','company','email','phone','notes','status','assignedTo'];
+    const obj = {};
+    keys.forEach((k,idx)=>{ if(idx<arr.length) obj[k]=arr[idx]; });
+    return obj;
+  }
+  function normalizeStatus(s){ const up = s.toUpperCase(); return STATUSES.includes(up)?up:null; }
+
+  async function exportCSV(){
+    const leads = await getVisibleLeads();
+    if(!leads.length){ toast('No leads to export'); return; }
+    const header = 'name,company,email,phone,notes,status,assignedTo,linkedin,twitter,facebook';
+    const rows = leads.map(l=>{
+      const r = [csvEscape(l.name), csvEscape(l.company), csvEscape(l.email), csvEscape(l.phone), csvEscape(l.notes), l.status||'', l.assignedTo||''];
+      const sl = l.socialLinks||{};
+      r.push(csvEscape(sl.linkedin||''), csvEscape(sl.twitter||''), csvEscape(sl.facebook||''));
+      return r.join(',');
+    });
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'leads.csv'; a.click();
+    toast('CSV exported');
+  }
+  function csvEscape(s){ if(s==null) return ''; const str=String(s); if(str.includes(',')||str.includes('"')||str.includes('\n')) return '"'+str.replace(/"/g,'""')+'"'; return str; }
+
+  function toggleSettings(){ const p=document.getElementById('settingsPanel'); p.classList.toggle('hidden'); }
+  function saveSettings(){
+    const s = {
+      sbUrl: document.getElementById('sbUrl').value.trim(),
+      sbKey: document.getElementById('sbKey').value.trim(),
+      orKey: document.getElementById('orKey').value.trim(),
+      model: document.getElementById('orModelSelect').value === 'custom' ? document.getElementById('orModelCustom').value.trim() : document.getElementById('orModelSelect').value
+    };
+    saveSettingsObj(s); toast('Settings saved');
+  }
+
+  async function openUsersPanel(){
+    try {
+      const users = await api('users', 'GET');
+      const members = users.filter(u=>u.role==='member');
+      const bg = document.createElement('div'); bg.className='modal-bg';
+      bg.innerHTML = `<div class="modal" onclick="event.stopPropagation()">
+        <h3>Manage Users</h3>
+        <table style="width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px">
+          <thead><tr><th>Name</th><th>Email</th><th>Password</th><th></th></tr></thead>
+          <tbody>
+            ${members.map(u=>`<tr>
+              <td>${esc(u.name)}</td>
+              <td>${esc(u.email)}</td>
+              <td>${esc(u.password)}</td>
+              <td><button class="danger" onclick="window.deleteMember('${esc(u.key)}')">Delete</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <h4>Add Member</h4>
+        <label>Name</label><input id="un-name">
+        <label>Email</label><input id="un-email" type="email">
+        <label>Password</label><input id="un-password" type="text">
+        <div class="actions">
+          <button id="btn-u-cancel">Close</button>
+          <button id="btn-u-save" class="primary">Add</button>
+        </div>
+      </div>`;
+      bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
+      document.body.appendChild(bg);
+      document.getElementById('btn-u-cancel').onclick = closeModal;
+      document.getElementById('btn-u-save').onclick = addMember;
+    } catch(e) { toast(e.message); }
+  }
+  async function addMember(){
+    const name = document.getElementById('un-name').value.trim();
+    const email = document.getElementById('un-email').value.trim().toLowerCase();
+    const password = document.getElementById('un-password').value.trim();
+    if(!name||!email||!password){ toast('Name, email, and password are required'); return; }
+    try {
+      await api('users', 'POST', '', { key: uid(), email, password, name, role: 'member' });
+      closeModal(); await render(); toast('Member added');
+    } catch(e) { toast(e.message); }
+  }
+  async function deleteMember(key){
+    if(!confirm('Remove this member?')) return;
+    try {
+      await api('users', 'DELETE', `?key=eq.${key}`);
+      await api('leads', 'PATCH', `?assignedTo=eq.${key}`, { assignedTo: null });
+      await render(); toast('Member removed');
+    } catch(e) { toast(e.message); }
+  }
+
+  async function aiSearch(id){
+    const leads = await api('leads', 'GET', `?id=eq.${id}`);
+    const lead = leads[0]; if(!lead) return;
+    const settings = loadSettings();
+    const key = settings.orKey; const model = settings.model||'openai/gpt-4o-mini';
+    if(!key){ toast('No OpenRouter key configured'); return; }
+    const prompt = `You are a sales assistant. Given the following lead info, infer likely role/industry context and suggest 3 short talking points for outreach. Do not claim real-time data.\n\nName: ${lead.name}\nCompany: ${lead.company||''}\nNotes: ${lead.notes||''}\nStatus: ${lead.status||''}`;
+    const btn = document.querySelector(`button[data-ai="${id}"]`); if(btn){ btn.disabled=true; btn.textContent='Searching...'; }
+    try{
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+key},
+        body: JSON.stringify({ model, messages:[{role:'user',content:prompt}], max_tokens:400 })
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error?.message||('HTTP '+res.status));
+      const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : 'No content.';
+      showAiModal(id, text);
+    }catch(err){
+      toast('AI error: '+(err.message||'unknown'));
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent='AI Search'; }
+    }
+  }
+  function showAiModal(id, text){
+    const bg = document.createElement('div'); bg.className='modal-bg';
+    bg.innerHTML = `<div class="modal">
+      <h3>AI Search Result</h3>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:8px">AI-generated — verify before use.</p>
+      <div id="aiResult" style="white-space:pre-wrap;background:#f9fafb;padding:10px;border-radius:6px;font-size:13px;line-height:1.55;border:1px solid var(--border)">${esc(text)}</div>
+      <div class="actions">
+        <button id="btn-ai-close">Close</button>
+        <button id="btn-ai-save" class="primary">Save to notes</button>
       </div>
     </div>`;
     bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
     document.body.appendChild(bg);
-  } catch(e) { toast(e.message); }
-}
-async function addMember(){
-  const name = document.getElementById('un-name').value.trim();
-  const email = document.getElementById('un-email').value.trim().toLowerCase();
-  const password = document.getElementById('un-password').value.trim();
-  if(!name||!email||!password){ toast('Name, email, and password are required'); return; }
-  try {
-    await api('users', 'POST', '', { key: uid(), email, password, name, role: 'member' });
-    closeModal(); await render(); toast('Member added');
-  } catch(e) { toast(e.message); }
-}
-async function deleteMember(key){
-  if(!confirm('Remove this member?')) return;
-  try {
-    await api('users', 'DELETE', `?key=eq.${key}`);
-    await api('leads', 'PATCH', `?assignedTo=eq.${key}`, { assignedTo: null });
-    await render(); toast('Member removed');
-  } catch(e) { toast(e.message); }
-}
-
-/* ===== AI Search ===== */
-async function aiSearch(id){
-  const leads = await api('leads', 'GET', `?id=eq.${id}`);
-  const lead = leads[0]; if(!lead) return;
-  const settings = loadSettings();
-  const key = settings.orKey; const model = settings.model||'openai/gpt-4o-mini';
-  if(!key){ toast('No OpenRouter key configured'); return; }
-  const prompt = `You are a sales assistant. Given the following lead info, infer likely role/industry context and suggest 3 short talking points for outreach. Do not claim real-time data.\n\nName: ${lead.name}\nCompany: ${lead.company||''}\nNotes: ${lead.notes||''}\nStatus: ${lead.status||''}`;
-  const btn = document.querySelector(`button[data-ai="${id}"]`); if(btn){ btn.disabled=true; btn.textContent='Searching...'; }
-  try{
-    const res = await fetch('https://openrouter.ai/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+key},
-      body: JSON.stringify({ model, messages:[{role:'user',content:prompt}], max_tokens:400 })
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error?.message||('HTTP '+res.status));
-    const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : 'No content.';
-    showAiModal(id, text);
-  }catch(err){
-    toast('AI error: '+(err.message||'unknown'));
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent='AI Search'; }
+    document.getElementById('btn-ai-close').onclick = closeModal;
+    document.getElementById('btn-ai-save').onclick = () => saveAiToNotes(id);
   }
-}
-function showAiModal(id, text){
-  const bg = document.createElement('div'); bg.className='modal-bg';
-  bg.innerHTML = `<div class="modal">
-    <h3>AI Search Result</h3>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">AI-generated — verify before use.</p>
-    <div id="aiResult" style="white-space:pre-wrap;background:#f9fafb;padding:10px;border-radius:6px;font-size:13px;line-height:1.55;border:1px solid var(--border)">${esc(text)}</div>
-    <div class="actions">
-      <button onclick="closeModal()">Close</button>
-      <button class="primary" onclick="saveAiToNotes('${id}')">Save to notes</button>
-    </div>
-  </div>`;
-  bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
-  document.body.appendChild(bg);
-}
-async function saveAiToNotes(id){
-  const text = document.getElementById('aiResult').textContent;
-  try {
-    const leads = await api('leads', 'GET', `?id=eq.${id}`);
-    const lead = leads[0];
-    const newNotes = (lead.notes?lead.notes+'\n\n':'') + 'AI Search: ' + text;
-    await api('leads', 'PATCH', `?id=eq.${id}`, { notes: newNotes });
-    closeModal(); await render(); toast('Saved to notes');
-  } catch(e) { toast(e.message); }
-}
-
-/* ===== Reports ===== */
-let reportRange = '4h';
-function setReportRange(range, btn){
-  reportRange = range;
-  document.querySelectorAll('.report-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderReports();
-}
-async function showReports(){
-  document.getElementById('reportPanel').classList.remove('hidden');
-  await renderReports();
-}
-function reportFilter(ts){
-  if(reportRange==='all') return true;
-  const cutoff = Date.now() - (reportRange==='4h' ? 4*60*60*1000 : 24*60*60*1000);
-  return ts >= cutoff;
-}
-async function renderReports(){
-  try {
-    const activity = (await api('activity', 'GET')).filter(a=>reportFilter(a.timestamp));
-    const leads = await api('leads', 'GET');
-    const container = document.getElementById('reportContent');
-    if(!activity.length){
-      container.innerHTML = '<div class="empty">No activity in this period.</div>';
-      return;
-    }
-    const rows = activity.map(a=>{
-      const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
-      const name = typeof targetLead==='object'?targetLead.name:targetLead;
-      return `<div class="activity-row">
-        <div>
-          <strong>${esc(a.userName)}</strong> <span class="muted">(${esc(a.userRole)})</span><br>
-          <span class="activity-meta">${esc(a.action)} — ${esc(name)}</span>
-        </div>
-        <div class="activity-meta">${new Date(a.timestamp).toLocaleString()}</div>
-      </div>`;
-    }).join('');
-    container.innerHTML = rows;
-  } catch(e) {
-    document.getElementById('reportContent').innerHTML = `<div class="empty">Error loading reports: ${esc(e.message)}</div>`;
+  async function saveAiToNotes(id){
+    const text = document.getElementById('aiResult').textContent;
+    try {
+      const leads = await api('leads', 'GET', `?id=eq.${id}`);
+      const lead = leads[0];
+      const newNotes = (lead.notes?lead.notes+'\n\n':'') + 'AI Search: ' + text;
+      await api('leads', 'PATCH', `?id=eq.${id}`, { notes: newNotes });
+      closeModal(); await render(); toast('Saved to notes');
+    } catch(e) { toast(e.message); }
   }
-}
-async function downloadReportPdf(){
-  try {
-    const activity = (await api('activity', 'GET')).filter(a=>reportFilter(a.timestamp));
-    const leads = await api('leads', 'GET');
-    const now = new Date();
-    let text = 'Sales CRM Activity Report\n';
-    text += 'Generated: ' + now.toLocaleString() + '\n';
-    text += 'Period: ' + (reportRange==='4h'?'Last 4 hours':reportRange==='24h'?'Last 24 hours':'All time') + '\n';
-    text += 'Total events: ' + activity.length + '\n\n';
-    activity.forEach((a,i)=>{
-      const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
-      const name = typeof targetLead==='object'?targetLead.name:targetLead;
-      text += (i+1) + '. ' + new Date(a.timestamp).toLocaleString() + ' | ' + a.userName + ' ('+a.userRole+') | ' + a.action + ' | ' + name + '\n';
-    });
-    const blob = new Blob([text], {type:'text/plain'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'activity-report.txt'; a.click();
-    toast('Report downloaded');
-  } catch(e) { toast(e.message); }
-}
-function printReport(){
-  const activity = []; // Simplified for print demo
-  const now = new Date();
-  const win = window.open('', '_blank');
-  if(!win){ toast('Popup blocked'); return; }
-  const rows = activity.map((a,i)=>{
-    return `<tr><td>${i+1}</td><td>${esc(new Date(a.timestamp).toLocaleString())}</td><td>${esc(a.userName)}</td><td>${esc(a.userRole)}</td><td>${esc(a.action)}</td><td>${esc(a.targetName)}</td></tr>`;
-  }).join('');
-  win.document.write(`<!DOCTYPE html><html><head><title>Activity Report</title>
-  <style>
-    body{font-family:Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#222}
-    h1{font-size:18px;margin-bottom:4px}
-    .meta{color:#6a737d;font-size:12px;margin-bottom:14px}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th,td{border:1px solid #e1e4e8;padding:8px 10px;text-align:left}
-    th{background:#f9fafb;color:#6a737d;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
-    tr:nth-child(even){background:#fafafa}
-    @media print{body{padding:0}}
-  </style></head><body>
-    <h1>Sales CRM Activity Report</h1>
-    <div class="meta">Generated: ${esc(now.toLocaleString())} · Period: ${esc(reportRange)} · Events: ${activity.length}</div>
-    <table>
-      <thead><tr><th>#</th><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Target</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <script>window.onload=()=>{ setTimeout(()=>window.print(), 200); }</script>
-  </body></html>`);
-  win.document.close();
-}
 
-/* ===== Rendering ===== */
-async function getVisibleLeads(){
-  let leads = await api('leads', 'GET');
-  const fStatus = document.getElementById('filterStatus').value;
-  const fMember = document.getElementById('filterMember').value;
-  const fText = document.getElementById('filterSearch').value.trim().toLowerCase();
-  if(fStatus) leads = leads.filter(l=>l.status===fStatus);
-  if(fMember) leads = leads.filter(l=>l.assignedTo===fMember);
-  if(fText) leads = leads.filter(l=> (l.name+' '+l.company+' '+l.email).toLowerCase().includes(fText));
-  if(session.role==='member') leads = leads.filter(l=>l.assignedTo===session.key);
-  return leads;
-}
-async function render(){
-  try {
-    const leads = await getVisibleLeads();
-    const settings = loadSettings();
-    const hasKey = !!(settings.orKey);
-    const users = await api('users', 'GET');
-
-    const stats = {}; STATUSES.forEach(s=>stats[s]=0); stats['TOTAL']=0;
-    let pool = session.role==='member' ? (await api('leads', 'GET', `?assignedTo=eq.${session.key}`)) : leads;
-    pool.forEach(l=>{ stats[l.status]=(stats[l.status]||0)+1; stats['TOTAL']++; });
-    let statsHtml = `<div class="stat"><span class="num">${stats.TOTAL}</span><span class="lbl">Total Leads</span></div>`;
-    STATUSES.forEach(s=>{
-      statsHtml += `<div class="stat"><span class="num">${stats[s]||0}</span><span class="lbl">${s}</span></div>`;
-    });
-    document.getElementById('statsRow').innerHTML = statsHtml;
-
-    const tHead = document.getElementById('tHead');
-    let h = '<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Status</th><th>Notes</th><th>Social</th><th>AI Search</th>';
-    if(session.role==='admin') h += '<th>Assigned To</th><th>Actions</th>';
-    else h += '<th>Actions</th>';
-    tHead.innerHTML = h;
-
-    const tBody = document.getElementById('tBody');
-    if(!leads.length){ tBody.innerHTML=''; document.getElementById('empty').classList.remove('hidden'); }
-    else{
-      document.getElementById('empty').classList.add('hidden');
-      tBody.innerHTML = leads.map(l=>{
-        const statusOptions = STATUSES.map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${s}</option>`).join('');
-        const aiDisabled = hasKey ? '' : ' disabled title="Ask your admin to configure an AI key in Settings."';
-        let actions = `<button class="danger" onclick="deleteLead('${l.id}')">Delete</button>`;
-        if(session.role==='admin') actions += ` ${memberSelectHtml(l, false, users)}`;
-        return `<tr>
-          <td>${esc(l.name)}</td>
-          <td>${esc(l.company)}</td>
-          <td>${esc(l.email)}</td>
-          <td>${esc(l.phone)}</td>
-          <td><select onchange="changeStatus('${l.id}', this.value)" ${session.role==='member'?'disabled':''}>${statusOptions}</select></td>
-          <td>${esc(l.notes)}</td>
-          <td>${socialButtons(l)}</td>
-          <td><button class="primary" data-ai="${l.id}" onclick="aiSearch('${l.id}')"${aiDisabled}>AI Search</button></td>
-          ${session.role==='admin'?`<td>${memberSelectHtml(l, false, users)}</td>`:''}
-          <td>${actions}</td>
-        </tr>`;
-      }).join('');
-    }
-
-    const fSel = document.getElementById('filterStatus');
-    if(!fSel.children.length){ STATUSES.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; fSel.appendChild(o); }); }
-    const mSel = document.getElementById('filterMember');
-    if(!mSel.children.length){
-      mSel.innerHTML = '<option value="">All Members</option>' + users.filter(u=>u.role==='member').map(m=>`<option value="${esc(m.key)}">${esc(m.name)}</option>`).join('');
-    }
-
-    if(session.role==='admin'){
-      document.getElementById('orKey').value = settings.orKey||'';
-      const sel = document.getElementById('orModelSelect');
-      const custom = document.getElementById('orModelCustom');
-      if(sel && custom){
-        const model = settings.model||'';
-        const preset = Array.from(sel.options).some(o=>o.value===model);
-        if(preset){ sel.value = model; custom.classList.add('hidden'); }
-        else{ sel.value='custom'; custom.value=model; custom.classList.remove('hidden'); }
+  let reportRange = '4h';
+  function setReportRange(range, btn){
+    reportRange = range;
+    document.querySelectorAll('.report-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderReports();
+  }
+  async function showReports(){
+    document.getElementById('reportPanel').classList.remove('hidden');
+    await renderReports();
+  }
+  function reportFilter(ts){
+    if(reportRange==='all') return true;
+    const cutoff = Date.now() - (reportRange==='4h' ? 4*60*60*1000 : 24*60*60*1000);
+    return ts >= cutoff;
+  }
+  async function renderReports(){
+    try {
+      const activity = (await api('activity', 'GET')).filter(a=>reportFilter(a.timestamp));
+      const leads = await api('leads', 'GET');
+      const container = document.getElementById('reportContent');
+      if(!activity.length){
+        container.innerHTML = '<div class="empty">No activity in this period.</div>';
+        return;
       }
+      const rows = activity.map(a=>{
+        const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
+        const name = typeof targetLead==='object'?targetLead.name:targetLead;
+        return `<div class="activity-row">
+          <div>
+            <strong>${esc(a.userName)}</strong> <span class="muted">(${esc(a.userRole)})</span><br>
+            <span class="activity-meta">${esc(a.action)} — ${esc(name)}</span>
+          </div>
+          <div class="activity-meta">${new Date(a.timestamp).toLocaleString()}</div>
+        </div>`;
+      }).join('');
+      container.innerHTML = rows;
+    } catch(e) {
+      document.getElementById('reportContent').innerHTML = `<div class="empty">Error loading reports: ${esc(e.message)}</div>`;
     }
-  } catch(e) {
-    toast(e.message);
   }
-}
+  async function downloadReportPdf(){
+    try {
+      const activity = (await api('activity', 'GET')).filter(a=>reportFilter(a.timestamp));
+      const leads = await api('leads', 'GET');
+      const now = new Date();
+      let text = 'Sales CRM Activity Report\n';
+      text += 'Generated: ' + now.toLocaleString() + '\n';
+      text += 'Period: ' + (reportRange==='4h'?'Last 4 hours':reportRange==='24h'?'Last 24 hours':'All time') + '\n';
+      text += 'Total events: ' + activity.length + '\n\n';
+      activity.forEach((a,i)=>{
+        const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
+        const name = typeof targetLead==='object'?targetLead.name:targetLead;
+        text += (i+1) + '. ' + new Date(a.timestamp).toLocaleString() + ' | ' + a.userName + ' ('+a.userRole+') | ' + a.action + ' | ' + name + '\n';
+      });
+      const blob = new Blob([text], {type:'text/plain'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'activity-report.txt'; a.click();
+      toast('Report downloaded');
+    } catch(e) { toast(e.message); }
+  }
+  function printReport(){
+    const now = new Date();
+    const win = window.open('', '_blank');
+    if(!win){ toast('Popup blocked'); return; }
+    win.document.write(`<!DOCTYPE html><html><head><title>Activity Report</title>
+    <style>
+      body{font-family:Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#222}
+      h1{font-size:18px;margin-bottom:4px}
+      .meta{color:#6a737d;font-size:12px;margin-bottom:14px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th,td{border:1px solid #e1e4e8;padding:8px 10px;text-align:left}
+      th{background:#f9fafb;color:#6a737d;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+      tr:nth-child(even){background:#fafafa}
+      @media print{body{padding:0}}
+    </style></head><body>
+      <h1>Sales CRM Activity Report</h1>
+      <div class="meta">Generated: ${esc(now.toLocaleString())} · Period: ${esc(reportRange)}</div>
+      <p>Please use the "Download PDF" button for the full detailed activity log.</p>
+      <script>window.onload=()=>{ setTimeout(()=>window.print(), 200); }</script>
+    </body></html>`);
+    win.document.close();
+  }
 
-/* ===== Bootstrap ===== */
-restoreSession();
-if(session){ showApp(); }
-document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-document.getElementById('loginEmail').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginPassword').focus(); });
+  async function getVisibleLeads(){
+    let leads = await api('leads', 'GET');
+    const fStatus = document.getElementById('filterStatus').value;
+    const fMember = document.getElementById('filterMember').value;
+    const fText = document.getElementById('filterSearch').value.trim().toLowerCase();
+    if(fStatus) leads = leads.filter(l=>l.status===fStatus);
+    if(fMember) leads = leads.filter(l=>l.assignedTo===fMember);
+    if(fText) leads = leads.filter(l=> (l.name+' '+l.company+' '+l.email).toLowerCase().includes(fText));
+    if(session.role==='member') leads = leads.filter(l=>l.assignedTo===session.key);
+    return leads;
+  }
+  async function render(){
+    try {
+      const leads = await getVisibleLeads();
+      const settings = loadSettings();
+      const hasKey = !!(settings.orKey);
+      const users = await api('users', 'GET');
+
+      const stats = {}; STATUSES.forEach(s=>stats[s]=0); stats['TOTAL']=0;
+      let pool = session.role==='member' ? (await api('leads', 'GET', `?assignedTo=eq.${session.key}`)) : leads;
+      pool.forEach(l=>{ stats[l.status]=(stats[l.status]||0)+1; stats['TOTAL']++; });
+      let statsHtml = `<div class="stat"><span class="num">${stats.TOTAL}</span><span class="lbl">Total Leads</span></div>`;
+      STATUSES.forEach(s=>{
+        statsHtml += `<div class="stat"><span class="num">${stats[s]||0}</span><span class="lbl">${s}</span></div>`;
+      });
+      document.getElementById('statsRow').innerHTML = statsHtml;
+
+      const tHead = document.getElementById('tHead');
+      let h = '<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Status</th><th>Notes</th><th>Social</th><th>AI Search</th>';
+      if(session.role==='admin') h += '<th>Assigned To</th><th>Actions</th>';
+      else h += '<th>Actions</th>';
+      tHead.innerHTML = h + '</tr>';
+
+      const tBody = document.getElementById('tBody');
+      if(!leads.length){ tBody.innerHTML=''; document.getElementById('empty').classList.remove('hidden'); }
+      else{
+        document.getElementById('empty').classList.add('hidden');
+        tBody.innerHTML = leads.map(l=>{
+          const statusOptions = STATUSES.map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${s}</option>`).join('');
+          const aiDisabled = hasKey ? '' : ' disabled title="Ask your admin to configure an AI key in Settings."';
+          let actions = `<button class="danger" onclick="window.deleteLead('${l.id}')">Delete</button>`;
+          if(session.role==='admin') actions += ` ${memberSelectHtml(l, false, users)}`;
+          return `<tr>
+            <td>${esc(l.name)}</td>
+            <td>${esc(l.company)}</td>
+            <td>${esc(l.email)}</td>
+            <td>${esc(l.phone)}</td>
+            <td><select onchange="window.changeStatus('${l.id}', this.value)" ${session.role==='member'?'disabled':''}>${statusOptions}</select></td>
+            <td>${esc(l.notes)}</td>
+            <td>${socialButtons(l)}</td>
+            <td><button class="primary" data-ai="${l.id}" onclick="window.aiSearch('${l.id}')"${aiDisabled}>AI Search</button></td>
+            ${session.role==='admin'?`<td>${memberSelectHtml(l, false, users)}</td>`:''}
+            <td>${actions}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      const fSel = document.getElementById('filterStatus');
+      if(!fSel.children.length){ STATUSES.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; fSel.appendChild(o); }); }
+      const mSel = document.getElementById('filterMember');
+      if(!mSel.children.length){
+        mSel.innerHTML = '<option value="">All Members</option>' + users.filter(u=>u.role==='member').map(m=>`<option value="${esc(m.key)}">${esc(m.name)}</option>`).join('');
+      }
+
+      if(session.role==='admin'){
+        document.getElementById('sbUrl').value = settings.sbUrl||'';
+        document.getElementById('sbKey').value = settings.sbKey||'';
+        document.getElementById('orKey').value = settings.orKey||'';
+        const sel = document.getElementById('orModelSelect');
+        const custom = document.getElementById('orModelCustom');
+        if(sel && custom){
+          const model = settings.model||'';
+          const preset = Array.from(sel.options).some(o=>o.value===model);
+          if(preset){ sel.value = model; custom.classList.add('hidden'); }
+          else{ sel.value='custom'; custom.value=model; custom.classList.remove('hidden'); }
+        }
+      }
+    } catch(e) {
+      toast(e.message);
+    }
+  }
+
+  // Global access for inline handlers
+  window.doLogin = doLogin;
+  window.logout = logout;
+  window.showApp = showApp;
+  window.toast = toast;
+  window.assignLead = assignLead;
+  window.deleteLead = deleteLead;
+  window.changeStatus = changeStatus;
+  window.editSocial = editSocial;
+  window.saveSocial = saveSocial;
+  window.closeModal = closeModal;
+  window.openAddModal = openAddModal;
+  window.saveNewLead = saveNewLead;
+  window.importCSV = importCSV;
+  window.exportCSV = exportCSV;
+  window.toggleSettings = toggleSettings;
+  window.saveSettings = saveSettings;
+  window.openCloudSetup = openCloudSetup;
+  window.saveCloudSetup = saveCloudSetup;
+  window.openUsersPanel = openUsersPanel;
+  window.addMember = addMember;
+  window.deleteMember = deleteMember;
+  window.aiSearch = aiSearch;
+  window.showReports = showReports;
+  window.setReportRange = setReportRange;
+  window.downloadReportPdf = downloadReportPdf;
+  window.printReport = printReport;
+
+  // Bindings
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log("CRM Loaded Successfully");
+
+    document.getElementById('btn-login').onclick = doLogin;
+    document.getElementById('btn-setup').onclick = openCloudSetup;
+    document.getElementById('btn-logout').onclick = logout;
+    document.getElementById('btn-add-lead').onclick = openAddModal;
+    document.getElementById('btn-export-csv').onclick = exportCSV;
+    document.getElementById('btn-manage-users').onclick = openUsersPanel;
+    document.getElementById('btn-reports').onclick = showReports;
+    document.getElementById('btn-toggle-settings').onclick = toggleSettings;
+    document.getElementById('btn-save-settings').onclick = saveSettings;
+    document.getElementById('btn-dl-report').onclick = downloadReportPdf;
+    document.getElementById('btn-print-report').onclick = printReport;
+    document.getElementById('csvFile').onchange = importCSV;
+
+    document.getElementById('filterStatus').onchange = render;
+    document.getElementById('filterMember').onchange = render;
+    document.getElementById('filterSearch').oninput = render;
+
+    document.getElementById('orModelSelect').onchange = (e) => {
+      const custom = document.getElementById('orModelCustom');
+      if(e.target.value === 'custom') custom.classList.remove('hidden');
+      else custom.classList.add('hidden');
+    };
+
+    document.querySelectorAll('.report-tab').forEach(btn => {
+      btn.onclick = (e) => setReportRange(e.target.dataset.range, e.target);
+    });
+
+    restoreSession();
+    if(session){ showApp(); }
+  });
+
+})();
 </script>
 </body>
 </html>
