@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales CRM</title>
+<style>
+  :root{--bg:#f4f6f8;--card:#fff;--border:#e1e4e8;--text:#222;--muted:#6a737d;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.06);--accent:#2563eb;--pill-new:#eef2ff;--pill-new-c:#4f46e5;--pill-contacted:#fff1f2;--pill-contacted-c:#e11d48;--pill-qualified:#fffbeb;--pill-qualified-c:#d97706;--pill-proposal:#eff6ff;--pill-proposal-c:#2563eb;--pill-won:#ecfdf5;--pill-won-c:#059669;--pill-lost:#f3f4f6;--pill-lost-c:#6b7280}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.45;min-height:100vh}
+  .hidden{display:none!important}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer;border:1px solid var(--border);background:#fff;padding:8px 14px;border-radius:6px;transition:.15s}
+  button:hover{background:#f6f8fa}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{filter:brightness(1.05)}
+  button.danger{background:#ef4444;color:#fff;border-color:#ef4444}
+  button.danger:hover{filter:brightness(1.05)}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  input,select,textarea{border:1px solid var(--border);padding:8px 10px;border-radius:6px;background:#fff}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .grid{display:grid;gap:12px}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+  .stat{text-align:center;padding:14px 8px;border-radius:8px;background:#fff;border:1px solid var(--border)}
+  .stat .num{font-size:26px;font-weight:700;display:block}
+  .stat .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .brand{font-weight:700;font-size:18px;letter-spacing:-.01em}
+  .user{display:flex;align-items:center;gap:10px}
+  .badge{font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;font-weight:600}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+  .toolbar input,.toolbar select{min-width:160px}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  th,td{padding:10px 12px;text-align:left;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th{background:#f9fafb;font-weight:600;color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none}
+  .pill.new{background:var(--pill-new);color:var(--pill-new-c)}
+  .pill.contacted{background:var(--pill-contacted);color:var(--pill-contacted-c)}
+  .pill.qualified{background:var(--pill-qualified);color:var(--pill-qualified-c)}
+  .pill.proposal{background:var(--pill-proposal);color:var(--pill-proposal-c)}
+  .pill.won{background:var(--pill-won);color:var(--pill-won-c)}
+  .pill.lost{background:var(--pill-lost);color:var(--pill-lost-c)}
+  .socials{display:flex;gap:6px;flex-wrap:wrap}
+  .soc{width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--border);background:#fff;text-decoration:none;color:#333;font-size:11px;font-weight:700}
+  .soc:hover{background:#f3f4f6}
+  .soc.linkedin{color:#0a66c2}
+  .soc.x{color:#000}
+  .soc.facebook{color:#1877f2}
+  .soc.google{color:#4285f4}
+  .soc-link{font-size:12px;color:var(--accent);text-decoration:none}
+  .soc-link:hover{text-decoration:underline}
+  .empty{text-align:center;padding:40px;color:var(--muted)}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .modal{background:#fff;border-radius:var(--radius);padding:20px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+  .modal h3{margin-bottom:14px}
+  .modal label{display:block;font-size:12px;font-weight:600;margin:8px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .modal input,.modal select,.modal textarea{width:100%}
+  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  .toast{position:fixed;bottom:20px;right:20px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transform:translateY(6px);transition:.2s}
+  .toast.show{opacity:1;transform:none}
+  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+  .login-box h1{font-size:20px;margin-bottom:4px}
+  .login-box p{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .login-box label{display:block;font-size:12px;font-weight:600;margin:10px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .login-box input{width:100%}
+  .login-box button{width:100%;margin-top:14px}
+  .settings-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+  .settings-section h3{font-size:14px;margin-bottom:10px}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+  .field label{font-size:12px;color:var(--muted);font-weight:600}
+  .field small{color:var(--muted);font-size:11px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:720px){.two-col{grid-template-columns:1fr}.toolbar{flex-direction:column;align-items:stretch}.toolbar input,.toolbar select{width:100%}}
+  .report-tabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .report-tab{padding:6px 10px;border-radius:6px;font-size:12px;border:1px solid var(--border);background:#fff}
+  .report-tab.active{background:#eef2ff;border-color:#c7d2fe;color:#4f46e5;font-weight:700}
+  .report-section{margin-top:10px}
+  .activity-row{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
+  .activity-row:last-child{border-bottom:none}
+  .activity-meta{color:var(--muted);font-size:12px}
+  .section-title{font-size:16px;font-weight:700;margin:6px 0 8px}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginView" class="login">
+  <div class="login-box">
+    <h1>Sales CRM</h1>
+    <p>Sign in to continue</p>
+    <label>Email</label>
+    <input type="email" id="loginEmail" autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <button class="primary" onclick="doLogin()">Sign In</button>
+    <button style="margin-top:10px; width:100%; font-size:11px; color:var(--muted)" onclick="openCloudSetup()">Configure Database</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="appView" class="hidden">
+  <header class="top">
+    <div class="brand">Sales CRM</div>
+    <div class="user">
+      <span id="userName"></span>
+      <span id="userRole" class="badge"></span>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <main style="padding:16px;max-width:1200px;margin:0 auto">
+    <div id="statsRow" class="grid stats" style="margin-bottom:14px"></div>
+
+    <div id="adminTools" class="hidden" style="margin:12px 0">
+      <div class="card">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button class="primary" onclick="openAddModal()">+ Add Lead</button>
+            <label class="button-like" style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);padding:8px 14px;border-radius:6px;background:#fff;cursor:pointer">
+              Import CSV
+              <input type="file" id="csvFile" accept=".csv" onchange="importCSV(this)" style="display:none">
+            </label>
+            <button onclick="exportCSV()">Export CSV</button>
+            <button onclick="openUsersPanel()">Manage Users</button>
+            <button onclick="showReports()">Reports</button>
+          </div>
+          <button onclick="toggleSettings()">Settings</button>
+        </div>
+        <div id="settingsPanel" class="hidden settings-section">
+          <h3>OpenRouter Settings</h3>
+          <div class="field">
+            <label>API Key</label>
+            <input type="password" id="orKey" placeholder="sk-or-...">
+            <small>Stored in this browser's localStorage — visible to anyone with device or devtools access. Don't use a key with broader access than you're comfortable exposing here.</small>
+          </div>
+          <div class="field">
+            <label>Model</label>
+            <select id="orModelSelect">
+              <option value="">-- Select a free model --</option>
+              <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (free)</option>
+              <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (free)</option>
+              <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (free)</option>
+              <option value="huggingfaceh4/zephyr-7b-beta:free">Zephyr 7B (free)</option>
+              <option value="qwen/qwen-2-7b-instruct:free">Qwen2 7B (free)</option>
+              <option value="nousresearch/nous-capybara-7b:free">Capybara 7B (free)</option>
+              <option value="grype/mixtral-8x7b-instruct:free">Mixtral 8x7B (free)</option>
+              <option value="openchat/openchat_7b:free">OpenChat 7B (free)</option>
+              <option value="custom">Custom model ID...</option>
+            </select>
+            <input type="text" id="orModelCustom" class="hidden" placeholder="e.g. meta-llama/llama-3.1-8b-instruct:free">
+          </div>
+          <button class="primary" onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="reportPanel" class="hidden card report-section">
+      <div class="section-title">User Activity Reports</div>
+      <div class="report-tabs">
+        <button class="report-tab active" onclick="setReportRange('4h',this)">Last 4 hours</button>
+        <button class="report-tab" onclick="setReportRange('24h',this)">Last 24 hours</button>
+        <button class="report-tab" onclick="setReportRange('all',this)">All time</button>
+      </div>
+      <div id="reportContent"></div>
+      <div style="margin-top:10px">
+        <button class="primary" onclick="downloadReportPdf()">Download PDF</button>
+        <button class="primary" onclick="printReport()">Print / Save as PDF</button>
+      </div>
+    </div>
+
+    <div class="toolbar card">
+      <select id="filterStatus" onchange="render()"><option value="">All Statuses</option></select>
+      <select id="filterMember" onchange="render()"><option value="">All Members</option></select>
+      <input type="text" id="filterSearch" placeholder="Search name, company, email" oninput="render()">
+    </div>
+
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr id="tHead"></tr>
+        </thead>
+        <tbody id="tBody"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty hidden">No leads yet. Upload a CSV to get started.</div>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ===== Data layer ===== */
+const USERS = {
+  admin: { email:'admin', password:'admin123', name:'Admin', role:'admin' },
+  member1: { email:'hamail', password:'hamail123', name:'Hamail', role:'member' },
+  member2: { email:'aliha', password:'aliha123', name:'Aliha', role:'member' },
+  member3: { email:'husnain', password:'husnain123', name:'Husnain', role:'member' }
+};
+const MEMBERS = ['member1','member2','member3'];
+const STATUSES = ['NEW','CONTACTED','QUALIFIED','PROPOSAL','WON','LOST'];
+const STORE = 'crm_leads_v1';
+const USERS_STORE = 'crm_users_v1';
+const SETTINGS_STORE = 'crm_settings_v1';
+const ACTIVITY_STORE = 'crm_activity_v1';
+let session = null;
+
+function esc(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function loadLeads(){ try{ return JSON.parse(localStorage.getItem(STORE)||'[]'); }catch(e){ return []; } }
+function saveLeads(leads){ localStorage.setItem(STORE, JSON.stringify(leads)); }
+function loadSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_STORE)||'{}'); }catch(e){ return {}; } }
+function saveSettingsObj(s){ localStorage.setItem(SETTINGS_STORE, JSON.stringify(s)); }
+function uid(){ return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
+function loadUsers(){ try{ const raw=localStorage.getItem(USERS_STORE); return raw?JSON.parse(raw):null; }catch(e){ return null; } }
+function saveUsersObj(u){ localStorage.setItem(USERS_STORE, JSON.stringify(u)); }
+function getUserStore(){
+  const stored = loadUsers();
+  const base = {
+    admin: { email:'admin@crm.com', password:'admin123', name:'Admin', role:'admin' },
+    member1: { email:'member1@crm.com', password:'member123', name:'Member 1', role:'member' },
+    member2: { email:'member2@crm.com', password:'member123', name:'Member 2', role:'member' },
+    member3: { email:'member3@crm.com', password:'member123', name:'Member 3', role:'member' }
+  };
+  if(!stored) { saveUsersObj(base); return base; }
+  return stored;
+}
+function memberEntries(users){ return Object.entries(users).filter(([,u])=>u.role==='member'); }
+function ensureMemberKey(){
+  const users = getUserStore();
+  const members = memberEntries(users);
+  if(!members.length){
+    const k = 'member'+Date.now().toString(36);
+    users[k] = { email: k+'@crm.com', password: 'member123', name:'Member '+members.length+1, role:'member' };
+    saveUsersObj(users);
+  }
+}
+function initMemberKeys(){
+  const users = getUserStore();
+  const members = memberEntries(users);
+  MEMBERS.forEach(m=>{ if(!users[m]){ const i = members.findIndex(([k])=>k===m); if(i>=0) return; users[m]={ email:m+'@crm.com', password:'member123', name:'Member '+(members.length+1), role:'member' }; } });
+  saveUsersObj(users);
+}
+function loadActivity(){ try{ return JSON.parse(localStorage.getItem(ACTIVITY_STORE)||'[]'); }catch(e){ return []; } }
+function saveActivity(arr){ localStorage.setItem(ACTIVITY_STORE, JSON.stringify(arr)); }
+function logAction(action, targetId, targetName){
+  const arr = loadActivity();
+  arr.unshift({ id: uid(), userKey: session?session.key:'system', userName: session?session.name:'System', userRole: session?session.role:'system', action, targetId: targetId||null, targetName: targetName||'', timestamp: Date.now() });
+  if(arr.length>500) arr.length = 500;
+  saveActivity(arr);
+}
+
+/* ===== Seed ===== */
+function seed(){
+  if(localStorage.getItem(STORE)) return;
+  const leads = [
+    {id:uid(),name:'Alice Carter',company:'Northwind Labs',email:'alice@northwind.test',phone:'+1 555-0101',notes:'Interested in enterprise plan. Follow up Monday.',status:'QUALIFIED',assignedTo:'member1',createdAt:Date.now()-86400000*5,socialLinks:{linkedin:'https://linkedin.com/in/alicecarter'}},
+    {id:uid(),name:'Bob Simmons',company:'Bluepeak Inc',email:'bob@bluepeak.test',phone:'+1 555-0102',notes:'',status:'NEW',assignedTo:'member2',createdAt:Date.now()-86400000*4},
+    {id:uid(),name:'Carla Nguyen',company:'Helix Retail',email:'carla@helix.test',phone:'+1 555-0103',notes:'Budget approved for Q3.',status:'PROPOSAL',assignedTo:'member1',createdAt:Date.now()-86400000*3},
+    {id:uid(),name:'David Park',company:'Orion Tech',email:'david@orion.test',phone:'+1 555-0104',notes:'Demo scheduled.',status:'CONTACTED',assignedTo:'member3',createdAt:Date.now()-86400000*2},
+    {id:uid(),name:'Elena Rossi',company:'Aurora Foods',email:'elena@aurora.test',phone:'+1 555-0105',notes:'Waiting on legal review.',status:'WON',assignedTo:'member2',createdAt:Date.now()-86400000*1},
+    {id:uid(),name:'Frank Wu',company:'Nova Digital',email:'frank@nova.test',phone:'+1 555-0106',notes:'Lost to competitor pricing.',status:'LOST',assignedTo:null,createdAt:Date.now()-86400000*6}
+  ];
+  saveLeads(leads);
+}
+function seedUsers(){
+  if(!localStorage.getItem(USERS_STORE)) getUserStore();
+}
+
+/* ===== Auth ===== */
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pw = document.getElementById('loginPassword').value;
+  let match = null;
+  const users = getUserStore();
+  for(const k in users){
+    if(users[k].email===email && users[k].password===pw){ match = users[k]; break; }
+  }
+  if(!match){ toast('Invalid email or password'); return; }
+  session = { key: Object.keys(users).find(k=>users[k].email===email), ...match };
+  sessionStorage.setItem('crm_session', JSON.stringify(session));
+  showApp();
+}
+function logout(){
+  session = null;
+  sessionStorage.removeItem('crm_session');
+  stopAutoReport();
+  location.reload();
+}
+function restoreSession(){
+  const raw = sessionStorage.getItem('crm_session');
+  if(raw){ try{ session = JSON.parse(raw); }catch(e){ session=null; } }
+}
+function showApp(){
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  document.getElementById('userName').textContent = session.name;
+  document.getElementById('userRole').textContent = session.role;
+  if(session.role==='admin'){
+    document.getElementById('adminTools').classList.remove('hidden');
+    refreshMemberDependent();
+    startAutoReport();
+  }else{
+    stopAutoReport();
+  }
+  render();
+}
+
+/* ===== UI helpers ===== */
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2200); }
+function statusPill(status){ return `<span class="pill ${status.toLowerCase()}" data-field="status" data-old="${esc(status)}">${esc(status)}</span>`; }
+function memberSelectHtml(lead, onlyOwn=false){
+  const users = getUserStore();
+  const memberKeys = memberEntries(users).map(([k])=>k);
+  const opts = ['', ...(onlyOwn ? [] : ['__unassigned']), ...memberKeys];
+  let html = `<select onchange="assignLead('${lead.id}', this.value)" ${onlyOwn?'disabled':''}>`;
+  opts.forEach(m=>{
+    const label = m ? (users[m]?users[m].name:m) : 'Unassigned';
+    const sel = lead.assignedTo === m ? ' selected' : '';
+    html += `<option value="${esc(m)}"${sel}>${esc(label)}</option>`;
+  });
+  html += '</select>';
+  return html;
+}
+function socialButtons(lead){
+  const name = esc(lead.name||'');
+  const comp = esc(lead.company||'');
+  const q = encodeURIComponent((comp?name+' '+comp:name));
+  const q2 = encodeURIComponent((comp?name+' '+comp:name));
+  let html = `<button class="soc linkedin" title="LinkedIn" onclick="window.open('https://www.linkedin.com/search/results/all/?keywords=${q}','_blank')">in</button>`;
+  html += `<button class="soc x" title="X" onclick="window.open('https://x.com/search?q=${q2}','_blank')">X</button>`;
+  html += `<button class="soc facebook" title="Facebook" onclick="window.open('https://www.facebook.com/search/top?q=${q}','_blank')">f</button>`;
+  html += `<button class="soc google" title="Google" onclick="window.open('https://www.google.com/search?q=${q2}+linkedin+OR+twitter','_blank')">G</button>`;
+  if(lead.socialLinks){
+    if(lead.socialLinks.linkedin) html += ` <a class="soc-link" href="${esc(lead.socialLinks.linkedin)}" target="_blank" rel="noopener">LinkedIn</a>`;
+    if(lead.socialLinks.twitter) html += ` <a class="soc-link" href="${esc(lead.socialLinks.twitter)}" target="_blank" rel="noopener">X</a>`;
+    if(lead.socialLinks.facebook) html += ` <a class="soc-link" href="${esc(lead.socialLinks.facebook)}" target="_blank" rel="noopener">Facebook</a>`;
+  }
+  html += ` <button class="soc" title="Edit social links" onclick="editSocial('${lead.id}')">Edit</button>`;
+  return html;
+}
+
+/* ===== Actions ===== */
+function assignLead(id, val){
+  const leads = loadLeads();
+  const lead = leads.find(l=>l.id===id);
+  if(!lead) return;
+  lead.assignedTo = val || null;
+  saveLeads(leads);
+  logAction('Assignment updated', lead.id, lead.name);
+  toast('Assignment saved');
+}
+function deleteLead(id){
+  if(!confirm('Delete this lead?')) return;
+  const lead = loadLeads().find(l=>l.id===id);
+  saveLeads(loadLeads().filter(l=>l.id!==id));
+  logAction('Lead deleted', id, lead?lead.name:'');
+  render();
+  toast('Lead deleted');
+}
+function changeStatus(id, newStatus){
+  const leads = loadLeads();
+  const lead = leads.find(l=>l.id===id);
+  if(!lead) return;
+  lead.status = newStatus;
+  saveLeads(leads);
+  logAction('Status changed', lead.id, lead.name+' -> '+newStatus);
+  render();
+  toast('Status updated');
+}
+function editSocial(id){
+  const leads = loadLeads();
+  const lead = leads.find(l=>l.id===id);
+  if(!lead) return;
+  const html = `<div class="modal" onclick="event.stopPropagation()">
+    <h3>Edit Social Links</h3>
+    <label>LinkedIn URL</label><input id="sl-linkedin" value="${esc(lead.socialLinks&&lead.socialLinks.linkedin)}">
+    <label>X URL</label><input id="sl-twitter" value="${esc(lead.socialLinks&&lead.socialLinks.twitter)}">
+    <label>Facebook URL</label><input id="sl-facebook" value="${esc(lead.socialLinks&&lead.socialLinks.facebook)}">
+    <div class="actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" onclick="saveSocial('${id}')">Save</button>
+    </div>
+  </div>`;
+  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
+  document.body.appendChild(bg);
+}
+function saveSocial(id){
+  const links = {
+    linkedin: document.getElementById('sl-linkedin').value.trim()||null,
+    twitter: document.getElementById('sl-twitter').value.trim()||null,
+    facebook: document.getElementById('sl-facebook').value.trim()||null
+  };
+  const leads = loadLeads();
+  const lead = leads.find(l=>l.id===id);
+  if(lead){ lead.socialLinks = links; saveLeads(leads); }
+  closeModal(); render(); toast('Social links saved');
+}
+function closeModal(){ const m=document.querySelector('.modal-bg'); if(m) m.remove(); }
+
+function openCloudSetup(){
+  const html = `<div class="modal" onclick="event.stopPropagation()">
+    <h3>Connect to Supabase</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Enter your project details to enable login and data sync.</p>
+    <label>Supabase URL</label><input id="setup-url" placeholder="https://xyz.supabase.co">
+    <label>Anon Key</label><input type="password" id="setup-key" placeholder="eyJhbG... ">
+    <div class="actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" onclick="saveCloudSetup()">Connect</button>
+    </div>
+  </div>`;
+  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
+  document.body.appendChild(bg);
+}
+
+function saveCloudSetup(){
+  const url = document.getElementById('setup-url').value.trim();
+  const key = document.getElementById('setup-key').value.trim();
+  if(!url || !key){ toast('Both fields are required'); return; }
+  const settings = loadSettings();
+  settings.sbUrl = url;
+  settings.sbKey = key;
+  saveSettingsObj(settings);
+  closeModal();
+  toast('Connected! You can now log in.');
+}
+
+/* ===== Add lead modal ===== */
+function openAddModal(){
+  refreshMemberDependent();
+  const html = `<div class="modal" onclick="event.stopPropagation()">
+    <h3>Add Lead</h3>
+    <label>Name *</label><input id="a-name">
+    <label>Company</label><input id="a-company">
+    <label>Email</label><input id="a-email" type="email">
+    <label>Phone</label><input id="a-phone">
+    <label>Notes</label><textarea id="a-notes" rows="3"></textarea>
+    <label>Status</label><select id="a-status">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+    <label>Assigned To</label><select id="a-assign"><option value="">Unassigned</option></select>
+    <div class="actions">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" onclick="saveNewLead()">Save</button>
+    </div>
+  </div>`;
+  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
+  document.body.appendChild(bg);
+  const sel = document.getElementById('a-assign');
+  if(sel){ sel.innerHTML = '<option value="">Unassigned</option>' + getMemberKeys().map(m=>`<option value="${m}">${getUserStore()[m]?getUserStore()[m].name:m}</option>`).join(''); }
+}
+function saveNewLead(){
+  const name = document.getElementById('a-name').value.trim();
+  if(!name){ toast('Name is required'); return; }
+  const lead = {
+    id: uid(), name, company: document.getElementById('a-company').value.trim(), email: document.getElementById('a-email').value.trim(), phone: document.getElementById('a-phone').value.trim(),
+    notes: document.getElementById('a-notes').value.trim(), status: document.getElementById('a-status').value, assignedTo: document.getElementById('a-assign').value || null,
+    createdAt: Date.now(), socialLinks: null
+  };
+  const leads = loadLeads(); leads.unshift(lead); saveLeads(leads);
+  logAction('Lead added', lead.id, lead.name);
+  closeModal(); render(); toast('Lead added');
+}
+function getMemberKeys(){ return window.MEMBER_KEYS || []; }
+
+/* ===== CSV import (hand-rolled quoted fields) ===== */
+function importCSV(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const text = e.target.result;
+    const rows = parseCSV(text);
+    let imported=0, skipped=0;
+    const leads = loadLeads();
+    rows.forEach(r=>{
+      const name = (r.name||'').trim();
+      if(!name){ skipped++; return; }
+      leads.unshift({
+        id: uid(), name, company: (r.company||'').trim(), email: (r.email||'').trim(), phone: (r.phone||'').trim(), notes: (r.notes||'').trim(),
+        status: normalizeStatus((r.status||'').trim())||'NEW', assignedTo: r.assignedTo && getMemberKeys().includes(r.assignedTo.trim()) ? r.assignedTo.trim() : null,
+        createdAt: Date.now(), socialLinks: null
+      });
+      imported++;
+    });
+    saveLeads(leads);
+    logAction('CSV imported', null, imported+' imported, '+skipped+' skipped');
+    render();
+    toast(imported+' imported, '+skipped+' skipped');
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+function parseCSV(text){
+  const rows = []; let cur=[]; let cell=''; let inQ=false; let i=0;
+  while(i<text.length){
+    const ch = text[i];
+    if(inQ){
+      if(ch==='"' && text[i+1]==='"'){ cell+='"'; i+=2; continue; }
+      if(ch==='"'){ inQ=false; i++; continue; }
+      cell+=ch; i++; continue;
+    }
+    if(ch==='"'){ inQ=true; i++; continue; }
+    if(ch===','){ cur.push(cell.trim()); cell=''; i++; continue; }
+    if(ch==='\n' || (ch==='\r' && text[i+1]==='\n')){
+      cur.push(cell.trim()); cell='';
+      if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur));
+      cur=[]; i+= (ch==='\r'?2:1); continue;
+    }
+    cell+=ch; i++;
+  }
+  if(cell||cur.length) { cur.push(cell.trim()); if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur)); }
+  return rows;
+}
+function objectify(arr){
+  const keys = ['name','company','email','phone','notes','status','assignedTo'];
+  const obj = {};
+  keys.forEach((k,idx)=>{ if(idx<arr.length) obj[k]=arr[idx]; });
+  return obj;
+}
+function normalizeStatus(s){ const up = s.toUpperCase(); return STATUSES.includes(up)?up:null; }
+
+/* ===== Export CSV ===== */
+function exportCSV(){
+  const leads = getVisibleLeads();
+  if(!leads.length){ toast('No leads to export'); return; }
+  const header = 'name,company,email,phone,notes,status,assignedTo,linkedin,twitter,facebook';
+  const rows = leads.map(l=>{
+    const r = [csvEscape(l.name), csvEscape(l.company), csvEscape(l.email), csvEscape(l.phone), csvEscape(l.notes), l.status||'', l.assignedTo||''];
+    const sl = l.socialLinks||{};
+    r.push(csvEscape(sl.linkedin||''), csvEscape(sl.twitter||''), csvEscape(sl.facebook||''));
+    return r.join(',');
+  });
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'leads.csv'; a.click();
+  toast('CSV exported');
+}
+function csvEscape(s){ if(s==null) return ''; const str=String(s); if(str.includes(',')||str.includes('"')||str.includes('\n')) return '"'+str.replace(/"/g,'""')+'"'; return str; }
+
+/* ===== Settings ===== */
+function toggleSettings(){ const p=document.getElementById('settingsPanel'); p.classList.toggle('hidden'); }
+function saveSettings(){
+  const key = document.getElementById('orKey').value.trim();
+  const sel = document.getElementById('orModelSelect').value;
+  const custom = document.getElementById('orModelCustom').value.trim();
+  const model = sel==='custom' ? custom : sel;
+  const s = { openrouterKey: key||'', model: model||'' };
+  saveSettingsObj(s); toast('Settings saved');
+}
+function setupModelField(){
+  const sel = document.getElementById('orModelSelect');
+  const custom = document.getElementById('orModelCustom');
+  if(!sel || !custom) return;
+  sel.addEventListener('change', ()=>{
+    if(sel.value==='custom') custom.classList.remove('hidden');
+    else custom.classList.add('hidden');
+  });
+}
+
+/* ===== Users management ===== */
+function refreshMemberDependent(){
+  const users = getUserStore();
+  const memberKeys = memberEntries(users).map(([k])=>k);
+  window.MEMBER_KEYS = memberKeys;
+}
+function openUsersPanel(){
+  refreshMemberDependent();
+  const users = getUserStore();
+  const members = memberEntries(users);
+  const bg = document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML = `<div class="modal" onclick="event.stopPropagation()">
+    <h3>Manage Users</h3>
+    <table style="width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px">
+      <thead><tr><th>Name</th><th>Email</th><th>Password</th><th></th></tr></thead>
+      <tbody>
+        ${members.map(([k,u])=>`<tr>
+          <td>${esc(u.name)}</td>
+          <td>${esc(u.email)}</td>
+          <td>${esc(u.password)}</td>
+          <td><button class="danger" onclick="deleteMember('${esc(k)}')">Delete</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <h4 style="margin:8px 0 6px">Add Member</h4>
+    <label>Name</label><input id="un-name">
+    <label>Email</label><input id="un-email" type="email">
+    <label>Password</label><input id="un-password" type="text">
+    <div class="actions">
+      <button onclick="closeModal()">Close</button>
+      <button class="primary" onclick="addMember()">Add</button>
+    </div>
+  </div>`;
+  bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
+  document.body.appendChild(bg);
+}
+function addMember(){
+  const name = document.getElementById('un-name').value.trim();
+  const email = document.getElementById('un-email').value.trim().toLowerCase();
+  const password = document.getElementById('un-password').value.trim();
+  if(!name||!email||!password){ toast('Name, email, and password are required'); return; }
+  const users = getUserStore();
+  if(Object.values(users).some(u=>u.email===email)){ toast('Email already exists'); return; }
+  const members = memberEntries(users);
+  const key = 'member'+Date.now().toString(36);
+  users[key] = { email, password, name, role:'member' };
+  saveUsersObj(users);
+  refreshMemberDependent();
+  closeModal(); render(); toast('Member added');
+}
+function deleteMember(key){
+  if(!confirm('Remove this member?')) return;
+  const users = getUserStore();
+  delete users[key];
+  saveUsersObj(users);
+  const leads = loadLeads();
+  leads.forEach(l=>{ if(l.assignedTo===key) l.assignedTo=null; });
+  saveLeads(leads);
+  refreshMemberDependent();
+  render(); toast('Member removed');
+}
+
+/* ===== AI Search ===== */
+async function aiSearch(id){
+  const leads = loadLeads(); const lead = leads.find(l=>l.id===id); if(!lead) return;
+  const settings = loadSettings();
+  const key = settings.openrouterKey; const model = settings.model||'openai/gpt-4o-mini';
+  if(!key){ toast('No OpenRouter key configured'); return; }
+  const prompt = `You are a sales assistant. Given the following lead info, infer likely role/industry context and suggest 3 short talking points for outreach. Do not claim real-time data.\n\nName: ${lead.name}\nCompany: ${lead.company||''}\nNotes: ${lead.notes||''}\nStatus: ${lead.status||''}`;
+  const btn = document.querySelector(`button[data-ai="${id}"]`); if(btn){ btn.disabled=true; btn.textContent='Searching...'; }
+  try{
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+key},
+      body: JSON.stringify({ model, messages:[{role:'user',content:prompt}], max_tokens:400 })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error?.message||('HTTP '+res.status));
+    const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : 'No content.';
+    showAiModal(id, text);
+  }catch(err){
+    toast('AI error: '+(err.message||'unknown'));
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='AI Search'; }
+  }
+}
+function showAiModal(id, text){
+  const bg = document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML = `<div class="modal">
+    <h3>AI Search Result</h3>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">AI-generated — verify before use.</p>
+    <div id="aiResult" style="white-space:pre-wrap;background:#f9fafb;padding:10px;border-radius:6px;font-size:13px;line-height:1.55;border:1px solid var(--border)">${esc(text)}</div>
+    <div class="actions">
+      <button onclick="closeModal()">Close</button>
+      <button class="primary" onclick="saveAiToNotes('${id}')">Save to notes</button>
+    </div>
+  </div>`;
+  bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
+  document.body.appendChild(bg);
+}
+function saveAiToNotes(id){
+  const text = document.getElementById('aiResult').textContent;
+  const leads = loadLeads();
+  const lead = leads.find(l=>l.id===id);
+  if(lead){ lead.notes = (lead.notes?lead.notes+'\n\n':'') + 'AI Search: ' + text; saveLeads(leads); }
+  closeModal(); render(); toast('Saved to notes');
+}
+
+/* ===== Reports ===== */
+let reportRange = '4h';
+function setReportRange(range, btn){
+  reportRange = range;
+  document.querySelectorAll('.report-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderReports();
+}
+function showReports(){
+  document.getElementById('reportPanel').classList.remove('hidden');
+  renderReports();
+}
+function reportFilter(ts){
+  if(reportRange==='all') return true;
+  const cutoff = Date.now() - (reportRange==='4h' ? 4*60*60*1000 : 24*60*60*1000);
+  return ts >= cutoff;
+}
+function renderReports(){
+  const activity = loadActivity().filter(a=>reportFilter(a.timestamp));
+  const leads = loadLeads();
+  const users = getUserStore();
+  const container = document.getElementById('reportContent');
+  if(!activity.length){
+    container.innerHTML = '<div class="empty">No activity in this period.</div>';
+    return;
+  }
+  const rows = activity.map(a=>{
+    const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
+    const name = typeof targetLead==='object'?targetLead.name:targetLead;
+    return `<div class="activity-row">
+      <div>
+        <strong>${esc(a.userName)}</strong> <span class="muted">(${esc(a.userRole)})</span><br>
+        <span class="activity-meta">${esc(a.action)} — ${esc(name)}</span>
+      </div>
+      <div class="activity-meta">${new Date(a.timestamp).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+  container.innerHTML = rows;
+}
+function downloadReportPdf(){
+  const activity = loadActivity().filter(a=>reportFilter(a.timestamp));
+  const leads = loadLeads();
+  const users = getUserStore();
+  const now = new Date();
+  let text = 'Sales CRM Activity Report\n';
+  text += 'Generated: ' + now.toLocaleString() + '\n';
+  text += 'Period: ' + (reportRange==='4h'?'Last 4 hours':reportRange==='24h'?'Last 24 hours':'All time') + '\n';
+  text += 'Total events: ' + activity.length + '\n\n';
+  activity.forEach((a,i)=>{
+    const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
+    const name = typeof targetLead==='object'?targetLead.name:targetLead;
+    text += (i+1) + '. ' + new Date(a.timestamp).toLocaleString() + ' | ' + a.userName + ' ('+a.userRole+') | ' + a.action + ' | ' + name + '\n';
+  });
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'activity-report.txt'; a.click();
+  toast('Report downloaded');
+}
+function printReport(){
+  const activity = loadActivity().filter(a=>reportFilter(a.timestamp));
+  const leads = loadLeads();
+  const users = getUserStore();
+  const now = new Date();
+  const win = window.open('', '_blank');
+  if(!win){ toast('Popup blocked'); return; }
+  const rows = activity.map((a,i)=>{
+    const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
+    const name = typeof targetLead==='object'?targetLead.name:targetLead;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${esc(new Date(a.timestamp).toLocaleString())}</td>
+      <td>${esc(a.userName)}</td>
+      <td>${esc(a.userRole)}</td>
+      <td>${esc(a.action)}</td>
+      <td>${esc(name)}</td>
+    </tr>`;
+  }).join('');
+  win.document.write(`<!DOCTYPE html><html><head><title>Activity Report</title>
+  <style>
+    body{font-family:Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#222}
+    h1{font-size:18px;margin-bottom:4px}
+    .meta{color:#6a737d;font-size:12px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border:1px solid #e1e4e8;padding:8px 10px;text-align:left}
+    th{background:#f9fafb;color:#6a737d;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+    tr:nth-child(even){background:#fafafa}
+    @media print{body{padding:0} .no-print{display:none}}
+  </style></head><body>
+    <h1>Sales CRM Activity Report</h1>
+    <div class="meta">Generated: ${esc(now.toLocaleString())} · Period: ${esc(reportRange==='4h'?'Last 4 hours':reportRange==='24h'?'Last 24 hours':'All time')} · Events: ${activity.length}</div>
+    <table>
+      <thead><tr><th>#</th><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Target</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <script>window.onload=()=>{ setTimeout(()=>window.print(), 200); }</script>
+  </body></html>`);
+  win.document.close();
+}
+
+/* ===== Auto report scheduler ===== */
+let autoReportHandle = null;
+function startAutoReport(){
+  if(autoReportHandle) return;
+  const FOUR_HOURS = 4*60*60*1000;
+  const STORE_LAST = 'crm_last_auto_report';
+  const now = Date.now();
+  const last = parseInt(localStorage.getItem(STORE_LAST)||'0', 10);
+  if(now - last >= FOUR_HOURS){
+    localStorage.setItem(STORE_LAST, now);
+    triggerAutoReport();
+  }
+  autoReportHandle = setInterval(()=>{
+    localStorage.setItem(STORE_LAST, Date.now());
+    triggerAutoReport();
+  }, FOUR_HOURS);
+}
+function stopAutoReport(){
+  if(autoReportHandle){ clearInterval(autoReportHandle); autoReportHandle = null; }
+}
+function triggerAutoReport(){
+  reportRange = '4h';
+  const now = new Date();
+  const activity = loadActivity().filter(a=>reportFilter(a.timestamp));
+  const leads = loadLeads();
+  const users = getUserStore();
+  if(!activity.length){
+    toast('Auto-report: no activity in last 4 hours');
+    return;
+  }
+  const win = window.open('', '_blank');
+  if(!win){ toast('Auto-report: popup blocked'); return; }
+  const rows = activity.map((a,i)=>{
+    const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
+    const name = typeof targetLead==='object'?targetLead.name:targetLead;
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${esc(new Date(a.timestamp).toLocaleString())}</td>
+      <td>${esc(a.userName)}</td>
+      <td>${esc(a.userRole)}</td>
+      <td>${esc(a.action)}</td>
+      <td>${esc(name)}</td>
+    </tr>`;
+  }).join('');
+  win.document.write(`<!DOCTYPE html><html><head><title>Auto Activity Report</title>
+  <style>
+    body{font-family:Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#222}
+    h1{font-size:18px;margin-bottom:4px}
+    .meta{color:#6a737d;font-size:12px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border:1px solid #e1e4e8;padding:8px 10px;text-align:left}
+    th{background:#f9fafb;color:#6a737d;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+    tr:nth-child(even){background:#fafafa}
+    @media print{body{padding:0}}
+  </style></head><body>
+    <h1>Sales CRM Auto Report</h1>
+    <div class="meta">Generated: ${esc(now.toLocaleString())} · Period: Last 4 hours · Events: ${activity.length}</div>
+    <table>
+      <thead><tr><th>#</th><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>Target</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <script>window.onload=()=>{ setTimeout(()=>window.print(), 200); }</script>
+  </body></html>`);
+  win.document.close();
+  toast('Auto-report generated');
+}
+
+/* ===== Rendering ===== */
+function getVisibleLeads(){
+  let leads = loadLeads();
+  const fStatus = document.getElementById('filterStatus').value;
+  const fMember = document.getElementById('filterMember').value;
+  const fText = document.getElementById('filterSearch').value.trim().toLowerCase();
+  if(fStatus) leads = leads.filter(l=>l.status===fStatus);
+  if(fMember) leads = leads.filter(l=>l.assignedTo===fMember);
+  if(fText) leads = leads.filter(l=> (l.name+' '+l.company+' '+l.email).toLowerCase().includes(fText));
+  if(session.role==='member') leads = leads.filter(l=>l.assignedTo===session.key);
+  return leads;
+}
+function render(){
+  const leads = getVisibleLeads();
+  const settings = loadSettings();
+  const hasKey = !!(settings.openrouterKey);
+
+  const stats = {}; STATUSES.forEach(s=>stats[s]=0); stats['TOTAL']=0;
+  let pool = session.role==='member' ? loadLeads().filter(l=>l.assignedTo===session.key) : loadLeads();
+  pool.forEach(l=>{ stats[l.status]=(stats[l.status]||0)+1; stats['TOTAL']++; });
+  let statsHtml = `<div class="stat"><span class="num">${stats.TOTAL}</span><span class="lbl">Total Leads</span></div>`;
+  STATUSES.forEach(s=>{
+    statsHtml += `<div class="stat"><span class="num">${stats[s]||0}</span><span class="lbl">${s}</span></div>`;
+  });
+  document.getElementById('statsRow').innerHTML = statsHtml;
+
+  const tHead = document.getElementById('tHead');
+  let h = '<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Status</th><th>Notes</th><th>Social</th><th>AI Search</th>';
+  if(session.role==='admin') h += '<th>Assigned To</th><th>Actions</th>';
+  else h += '<th>Actions</th>';
+  tHead.innerHTML = h;
+
+  const tBody = document.getElementById('tBody');
+  if(!leads.length){ tBody.innerHTML=''; document.getElementById('empty').classList.remove('hidden'); }
+  else{
+    document.getElementById('empty').classList.add('hidden');
+    tBody.innerHTML = leads.map(l=>{
+      const statusOptions = STATUSES.map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${s}</option>`).join('');
+      const aiDisabled = hasKey ? '' : ' disabled title="Ask your admin to configure an AI key in Settings."';
+      let actions = `<button class="danger" onclick="deleteLead('${l.id}')">Delete</button>`;
+      if(session.role==='admin') actions += ` ${memberSelectHtml(l)}`;
+      return `<tr>
+        <td>${esc(l.name)}</td>
+        <td>${esc(l.company)}</td>
+        <td>${esc(l.email)}</td>
+        <td>${esc(l.phone)}</td>
+        <td><select onchange="changeStatus('${l.id}', this.value)" ${session.role==='member'?'disabled':''}>${statusOptions}</select></td>
+        <td>${esc(l.notes)}</td>
+        <td>${socialButtons(l)}</td>
+        <td><button class="primary" data-ai="${l.id}" onclick="aiSearch('${l.id}')"${aiDisabled}>AI Search</button></td>
+        ${session.role==='admin'?`<td>${memberSelectHtml(l)}</td>`:''}
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const fSel = document.getElementById('filterStatus');
+  if(!fSel.children.length){ STATUSES.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; fSel.appendChild(o); }); }
+  const mSel = document.getElementById('filterMember');
+  if(!mSel.children.length){
+    mSel.innerHTML = '<option value="">All Members</option>' + getMemberKeys().map(m=>`<option value="${m}">${getUserStore()[m]?getUserStore()[m].name:m}</option>`).join('');
+  }
+
+  if(session.role==='admin'){
+    document.getElementById('orKey').value = settings.openrouterKey||'';
+    const sel = document.getElementById('orModelSelect');
+    const custom = document.getElementById('orModelCustom');
+    if(sel && custom){
+      const model = settings.model||'';
+      const preset = Array.from(sel.options).some(o=>o.value===model);
+      if(preset){ sel.value = model; custom.classList.add('hidden'); }
+      else{ sel.value='custom'; custom.value=model; custom.classList.remove('hidden'); }
+    }
+  }
+}
+
+/* ===== Bootstrap ===== */
+seed();
+seedUsers();
+initMemberKeys();
+restoreSession();
+if(session){ showApp(); }
+setupModelField();
+document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginEmail').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginPassword').focus(); });
+</script>
+</body>
+</html>
