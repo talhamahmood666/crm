@@ -923,35 +923,17 @@ function downloadFile(name, content, mime){
 function aiSearch(id, btn){
   var l = findLead(id);
   if (!l) return;
-  var key = localStorage.getItem("or_api_key") || "";
-  var model = localStorage.getItem("or_model") || "openai/gpt-4o-mini";
-  if (!key){ toast("Set your OpenRouter API key in Settings first", "err"); return; }
+  var cfg = orKeyAndModel();
+  if (!cfg.geminiKey && !cfg.key){ toast("Set a Gemini or OpenRouter API key in Settings first", "err"); return; }
   btn.disabled = true;
   var old = btn.textContent;
   btn.textContent = "...";
-  fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + key,
-      "Content-Type": "application/json",
-      "HTTP-Referer": location.origin || "https://sales-crm.local",
-      "X-Title": "Sales CRM"
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [{
-        role: "user",
-        content: "You are a sales assistant. Lead: " + (l.name || "") +
-          (l.company ? " at " + l.company : "") +
-          ". Notes: " + (l.notes || "none") +
-          ". Status: " + l.status +
-          ". Give 3 short, specific talking points for a first outreach call. Plain text, numbered."
-      }]
-    })
-  }).then(function(r){ return r.json().then(function(j){
-      if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
-      return j;
-  });}).then(function(j){
+  var promptText = "You are a sales assistant. Lead: " + (l.name || "") +
+      (l.company ? " at " + l.company : "") +
+      ". Notes: " + (l.notes || "none") +
+      ". Status: " + l.status +
+      ". Give 3 short, specific talking points for a first outreach call. Plain text, numbered.";
+  aiChat(promptText).then(function(j){
     var txt = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : "No response.";
     showAiResult(l, txt);
   }).catch(function(err){
@@ -980,7 +962,14 @@ function showAiResult(l, text){
 }
 
 /* ============ PROSPECT FINDER ============ */
-var INDUSTRIES = ["Healthcare","Real Estate","E-commerce / Retail","Financial Services","Manufacturing"];
+var INDUSTRIES = [
+  "Healthcare (care and clinical support roles)",
+  "Construction (site and trade professionals)",
+  "Logistics (drivers, warehouse and operations)",
+  "Security (licensed and operational staff)",
+  "Hospitality (front and back-of-house teams)",
+  "Facilities"
+];
 var finderIndustry = "";
 var finderProspects = [];
 
@@ -989,7 +978,8 @@ function openFinder(){
     '<p style="font-size:13px;color:var(--muted);margin-bottom:12px">AI searches the web for real companies in a major industry, finds the point of contact, email, phone, and social links, then adds them straight to your leads.</p>' +
     '<div class="row"><label>Industry</label><div class="ind-chips" id="ind-chips">' +
       INDUSTRIES.map(function(name){
-        return '<button type="button" class="ind-chip" data-ind="' + esc(name) + '">' + esc(name) + '</button>';
+        var short = name.split(" (")[0];
+        return '<button type="button" class="ind-chip" data-ind="' + esc(name) + '" title="' + esc(name) + '">' + esc(short) + '</button>';
       }).join("") +
     "</div></div>" +
     '<div class="row"><label>What are you looking for? (optional)</label>' +
@@ -1012,15 +1002,89 @@ function openFinder(){
 
 function orKeyAndModel(){
   return {
+    geminiKey: localStorage.getItem("gemini_api_key") || "",
+    geminiModel: localStorage.getItem("gemini_model") || "gemini-2.0-flash",
+    tavilyKey: localStorage.getItem("tavily_api_key") || "",
     key: localStorage.getItem("or_api_key") || "",
     model: localStorage.getItem("or_model") || "openai/gpt-4o-mini"
   };
 }
 
+/* Unified AI call: tries Gemini first (if key set), falls back to OpenRouter */
+function aiChat(promptText){
+  var cfg = orKeyAndModel();
+  if (cfg.geminiKey){
+    return fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + cfg.geminiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: cfg.geminiModel,
+        messages: [{ role: "user", content: promptText }]
+      })
+    }).then(function(r){ return r.json().then(function(j){
+      if (!r.ok) throw new Error("Gemini: " + ((j.error && j.error.message) || ("HTTP " + r.status)));
+      return j;
+    });}).catch(function(err){
+      /* if no openrouter fallback available, rethrow */
+      if (!cfg.key) throw err;
+      console.warn("Gemini failed, falling back to OpenRouter:", err.message);
+      return orChat(cfg, promptText);
+    });
+  }
+  if (!cfg.key) throw new Error("No API key set. Add a Gemini or OpenRouter key in Settings.");
+  return orChat(cfg, promptText);
+}
+
+function orChat(cfg, promptText){
+  return fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + cfg.key,
+      "Content-Type": "application/json",
+      "HTTP-Referer": location.origin || "https://sales-crm.local",
+      "X-Title": "Sales CRM"
+    },
+    body: JSON.stringify({ model: cfg.model, messages: [{ role: "user", content: promptText }] })
+  }).then(function(r){ return r.json().then(function(j){
+    if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+    return j;
+  });});
+}
+
+/* Tavily live web search: returns formatted result text, or null if unavailable */
+function tavilySearch(query, maxResults){
+  var cfg = orKeyAndModel();
+  if (!cfg.tavilyKey) return Promise.resolve(null);
+  return fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: cfg.tavilyKey,
+      query: query,
+      search_depth: "advanced",
+      max_results: Math.min(maxResults || 10, 20),
+      include_answer: false
+    })
+  }).then(function(r){ return r.json().then(function(j){
+      if (!r.ok) throw new Error((j.detail && (j.detail.error || JSON.stringify(j.detail))) || ("HTTP " + r.status));
+      return j;
+  });}).then(function(j){
+    var results = j.results || [];
+    if (!results.length) return null;
+    return results.map(function(r2, i2){
+      return "[" + (i2 + 1) + "] " + r2.title + "\nURL: " + r2.url + "\n" + (r2.content || "").slice(0, 600);
+    }).join("\n\n");
+  }).catch(function(err){
+    console.warn("Tavily failed:", err.message);
+    toast("Tavily search failed, using AI knowledge only", "err");
+    return null;
+  });
+}
+
 function runFind(back){
   if (!finderIndustry){ toast("Pick an industry first", "err"); return; }
   var cfg = orKeyAndModel();
-  if (!cfg.key){ toast("Set your OpenRouter API key in Settings first", "err"); return; }
+  if (!cfg.geminiKey && !cfg.key){ toast("Set a Gemini or OpenRouter API key in Settings first", "err"); return; }
   var extra = back.querySelector("#finder-q").value.trim();
   var count = parseInt(back.querySelector("#finder-count").value, 10) || 10;
   var status = back.querySelector("#finder-status");
@@ -1029,43 +1093,37 @@ function runFind(back){
   btn.disabled = true;
   results.innerHTML = "";
   status.classList.remove("hidden");
-  status.innerHTML = '<span class="spinner"></span> AI is searching the web for ' + esc(finderIndustry) + ' prospects, this can take a minute...';
+  status.innerHTML = '<span class="spinner"></span> AI is finding ' + esc(finderIndustry) + ' prospects, this can take a minute...';
 
-  /* use a web-search capable free model for grounded results */
-  var searchModel = cfg.model.indexOf(":online") > -1 ? cfg.model : cfg.model + ":online";
+  var promptText =
+    "Find " + count + " real, currently-operating companies in the " + finderIndustry + " industry" +
+    (extra ? ". Focus on: " + extra : "") +
+    '. For EACH company return exactly these fields as JSON inside an array named "prospects": ' +
+    '{"company":"legal or trading name",' +
+    '"contactName":"best point of contact (founder, owner, sales director, or similar decision maker)",' +
+    '"contactTitle":"their job title",' +
+    '"email":"their real public email or best publicly listed company contact email, empty string if truly not findable",' +
+    '"phone":"publicly listed phone number, empty string if none",' +
+    '"linkedin":"company or contact LinkedIn URL",' +
+    '"website":"company website URL",' +
+    '"notes":"one line on what they do and why they could be a good lead"}.' +
+    " Only include companies you actually know from your knowledge. Never invent emails or phone numbers: leave them empty if not known. " +
+    'Reply with ONLY valid JSON: {"prospects":[...]}. No markdown fences, no commentary.';
 
-  fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + cfg.key,
-      "Content-Type": "application/json",
-      "HTTP-Referer": location.origin || "https://sales-crm.local",
-      "X-Title": "Sales CRM Prospect Finder"
-    },
-    body: JSON.stringify({
-      model: searchModel,
-      messages: [{
-        role: "user",
-        content:
-          "Search the internet and find " + count + " real, currently-operating companies in the " + finderIndustry + " industry" +
-          (extra ? ". Focus on: " + extra : "") +
-          '. For EACH company return exactly these fields as JSON inside an array named "prospects": ' +
-          '{"company":"legal or trading name",' +
-          '"contactName":"best point of contact (founder, owner, sales director, or similar decision maker)",' +
-          '"contactTitle":"their job title",' +
-          '"email":"their real public email or best publicly listed company contact email, empty string if truly not findable",' +
-          '"phone":"publicly listed phone number, empty string if none",' +
-          '"linkedin":"company or contact LinkedIn URL",' +
-          '"website":"company website URL",' +
-          '"notes":"one line on what they do and why they could be a good lead"}.' +
-          " Only include companies you actually found on the web. Never invent emails or phone numbers: leave them empty if not found. " +
-          'Reply with ONLY valid JSON: {"prospects":[...]}. No markdown fences, no commentary.'
-      }]
-    })
-  }).then(function(r){ return r.json().then(function(j){
-      if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
-      return j;
-  });}).then(function(j){
+  status.innerHTML = '<span class="spinner"></span> Searching the live web for ' + esc(finderIndustry) + ' prospects...';
+
+  tavilySearch(
+    "best " + finderIndustry + " companies" + (extra ? " " + extra : "") + " contact details decision maker",
+    count * 2
+  ).then(function(webCtx){
+    var fullPrompt = promptText;
+    if (webCtx){
+      fullPrompt = "You are given LIVE web search results from today. Use them as your primary source of truth; extract real company names and any contact details found in these results.\n\n" +
+        "LIVE WEB RESULTS:\n" + webCtx + "\n\nTASK:\n" + promptText.replace("Only include companies you actually know from your knowledge.", "Prioritize companies appearing in the web results above.");
+      status.innerHTML = '<span class="spinner"></span> Extracting prospect details with AI...';
+    }
+    return aiChat(fullPrompt);
+  }).then(function(j){
     var txt = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : "{}";
     txt = txt.replace(/```json|```/g, "").trim();
     var start = txt.indexOf("{"), end = txt.lastIndexOf("}");
@@ -1081,9 +1139,6 @@ function runFind(back){
   }).catch(function(err){
     status.innerHTML = "";
     toast("Finder failed: " + err.message, "err");
-    if (String(err.message).indexOf("404") > -1 || String(err.message).toLowerCase().indexOf("no endpoints") > -1){
-      status.textContent = "Your configured model does not support web search (:online). Try model 'openai/gpt-4o-mini:online' or another web-capable model in Settings.";
-    }
   }).finally(function(){ btn.disabled = false; });
 }
 
@@ -1353,11 +1408,22 @@ function openSettingsPanel(){
   if (session.role !== "admin") return;
   var savedKey = localStorage.getItem("or_api_key") || "";
   var savedModel = localStorage.getItem("or_model") || "";
+  var savedGKey = localStorage.getItem("gemini_api_key") || "";
+  var savedGModel = localStorage.getItem("gemini_model") || "";
+  var savedTKey = localStorage.getItem("tavily_api_key") || "";
   var back = openModalShell("Settings",
     '<form id="settings-form">' +
-      '<h2 style="font-size:12px;margin-bottom:10px">AI (OpenRouter)</h2>' +
-      '<div class="row"><label>API Key</label><input name="orkey" placeholder="sk-or-v1-..." value="' + esc(savedKey) + '"></div>' +
-      '<div class="row"><label>Model</label><input name="ormodel" placeholder="openai/gpt-4o-mini" value="' + esc(savedModel) + '"></div>' +
+      '<h2 style="font-size:12px;margin-bottom:10px">AI Provider (Gemini is used first, OpenRouter as backup)</h2>' +
+      '<div class="row"><label>Gemini API Key (free at aistudio.google.com)</label>' +
+        '<input name="gkey" placeholder="AIza..." value="' + esc(savedGKey) + '"></div>' +
+      '<div class="row"><label>Gemini Model</label>' +
+        '<input name="gmodel" placeholder="gemini-2.0-flash" value="' + esc(savedGModel) + '"></div>' +
+      '<div class="row"><label>Tavily API Key (live web search, free at tavily.com)</label>' +
+        '<input name="tkey" placeholder="tvly-..." value="' + esc(savedTKey) + '"></div>' +
+      '<div class="row"><label>OpenRouter API Key (fallback)</label>' +
+        '<input name="orkey" placeholder="sk-or-v1-..." value="' + esc(savedKey) + '"></div>' +
+      '<div class="row"><label>OpenRouter Model (fallback)</label>' +
+        '<input name="ormodel" placeholder="openai/gpt-4o-mini" value="' + esc(savedModel) + '"></div>' +
       '<h2 style="font-size:12px;margin:14px 0 10px">Auto Logout (members only, admins exempt)</h2>' +
       '<div class="row"><label>Logout after N minutes idle</label><input name="idlemins" type="number" min="1" max="720" value="' + esc(appSettings.autoLogoutMinutes) + '"></div>' +
       '<div class="row"><label>Hard logout time (24h HH:MM, blank = off)</label><input name="hardtime" placeholder="18:30" pattern="^$|^([01]?\\d|2[0-3]):[0-5]\\d$" value="' + esc(appSettings.hardLogoutTime) + '"></div>' +
@@ -1366,6 +1432,9 @@ function openSettingsPanel(){
   back.querySelector("#settings-form").addEventListener("submit", function(e){
     e.preventDefault();
     var fd = new FormData(e.target);
+    localStorage.setItem("gemini_api_key", String(fd.get("gkey")).trim());
+    localStorage.setItem("gemini_model", String(fd.get("gmodel")).trim() || "gemini-2.0-flash");
+    localStorage.setItem("tavily_api_key", String(fd.get("tkey")).trim());
     localStorage.setItem("or_api_key", String(fd.get("orkey")).trim());
     localStorage.setItem("or_model", String(fd.get("ormodel")).trim());
     var mins = parseInt(fd.get("idlemins"), 10);
