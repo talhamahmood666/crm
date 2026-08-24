@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sales CRM (Cloud)</title>
 <style>
-  :root{--bg:#f4f6f8;--card:#fff;--border:#e1e4e8;--text:#222;--muted:#6a737d;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.06);--accent:#2563eb;--pill-new:#eef2ff;--pill-new-c:#4f46e5;--pill-contacted:#fff1f2;--pill-contacted-c:#e11d48;--pill-qualified:#fffbeb;--pill-qualified-c:#d97706;--pill-proposal:#eff6ff;--pill-proposal-c:#2563eb;--pill-won:#ecfdf5;--pill-won-c:#059669;--pill-lost:#f3f4f6;--pill-lost-c:#6b7280}
+  :root{
+    --bg:#f4f6f8;--card:#fff;--border:#e1e4e8;--text:#222;--muted:#6a737d;--radius:10px;
+    --shadow:0 1px 3px rgba(0,0,0,.06);--accent:#2563eb;
+    --pill-new-bg:#eef2ff;--pill-new-c:#4f46e5;--pill-contacted-bg:#fff1f2;--pill-contacted-c:#e11d48;
+    --pill-qualified-bg:#fffbeb;--pill-qualified-c:#d97706;--pill-proposal-bg:#eff6ff;--pill-proposal-c:#2563eb;
+    --pill-won-bg:#ecfdf5;--pill-won-c:#059669;--pill-lost-bg:#f3f4f6;--pill-lost-c:#6b7280
+  }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.45;min-height:100vh}
   .hidden{display:none!important}
@@ -13,771 +19,810 @@
   button{cursor:pointer;border:1px solid var(--border);background:#fff;padding:8px 14px;border-radius:6px;transition:.15s}
   button:hover{background:#f6f8fa}
   button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-  button.primary:hover{filter:brightness(1.05)}
+  button.primary:hover{filter:brightness(1.08)}
   button.danger{background:#ef4444;color:#fff;border-color:#ef4444}
-  button.danger:hover{filter:brightness(1.05)}
+  button.danger:hover{filter:brightness(1.08)}
+  button.small{padding:4px 8px;font-size:12px;border-radius:5px}
   button:disabled{opacity:.6;cursor:not-allowed}
-  input,select,textarea{border:1px solid var(--border);padding:8px 10px;border-radius:6px;background:#fff}
+  input,select,textarea{border:1px solid var(--border);padding:8px 10px;border-radius:6px;background:#fff;width:100%}
+  label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
   .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
   .grid{display:grid;gap:12px}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-  .stat{text-align:center;padding:14px 8px;border-radius:8px;background:#fff;border:1px solid var(--border)}
-  .stat .num{font-size:26px;font-weight:700;display:block}
-  .stat .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-  header.top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  .stats{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-bottom:14px}
+  .stat{text-align:center;padding:14px 6px;border-radius:8px;background:#fff;border:1px solid var(--border)}
+  .stat .num{font-size:24px;font-weight:700;display:block}
+  .stat .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  header.top{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:10px}
   .brand{font-weight:700;font-size:18px;letter-spacing:-.01em}
-  .user{display:flex;align-items:center;gap:10px}
+  .user{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .badge{font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;font-weight:600}
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
-  .toolbar input,.toolbar select{min-width:160px}
-  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-  th,td{padding:10px 12px;text-align:left;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap}
-  th{background:#f9fafb;font-weight:600;color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em}
+  .toolbar input,.toolbar select{min-width:150px;width:auto}
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+  table{width:100%;border-collapse:collapse;min-width:1150px}
+  th,td{padding:9px 12px;text-align:left;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+  th{background:#f9fafb;font-weight:600;color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em;position:sticky;top:0}
   tr:last-child td{border-bottom:none}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none}
-  .pill.new{background:var(--pill-new);color:var(--pill-new-c)}
-  .pill.contacted{background:var(--pill-contacted);color:var(--pill-contacted-c)}
-  .pill.qualified{background:var(--pill-qualified);color:var(--pill-qualified-c)}
-  .pill.proposal{background:var(--pill-proposal);color:var(--pill-proposal-c)}
-  .pill.won{background:var(--pill-won);color:var(--pill-won-c)}
-  .pill.lost{background:var(--pill-lost);color:var(--pill-lost-c)}
-  .socials{display:flex;gap:6px;flex-wrap:wrap}
-  .soc{width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--border);background:#fff;text-decoration:none;color:#333;font-size:11px;font-weight:700}
-  .soc:hover{background:#f3f4f6}
-  .soc.linkedin{color:#0a66c2}
-  .soc.x{color:#000}
-  .soc.facebook{color:#1877f2}
-  .soc.google{color:#4285f4}
-  .soc-link{font-size:12px;color:var(--accent);text-decoration:none}
-  .soc-link:hover{text-decoration:underline}
-  .empty{text-align:center;padding:40px;color:var(--muted)}
-  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
-  .modal{background:#fff;border-radius:var(--radius);padding:20px;width:100%;max-width:540px;max-height:90vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.15)}
-  .modal h3{margin-bottom:14px}
-  .modal label{display:block;font-size:12px;font-weight:600;margin:8px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-  .modal input,.modal select,.modal textarea{width:100%}
-  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
-  .toast{position:fixed;bottom:20px;right:20px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transform:translateY(6px);transition:.2s}
-  .toast.show{opacity:1;transform:none}
-  .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .login-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:100%;max-width:380px;box-shadow:var(--shadow)}
-  .login-box h1{font-size:20px;margin-bottom:4px}
-  .login-box p{color:var(--muted);font-size:13px;margin-bottom:18px}
-  .login-box label{display:block;font-size:12px;font-weight:600;margin:10px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-  .login-box input{width:100%}
-  .login-box button{width:100%;margin-top:14px}
-  .settings-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
-  .settings-section h3{font-size:14px;margin-bottom:10px}
-  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
-  .field label{font-size:12px;color:var(--muted);font-weight:600}
-  .field small{color:var(--muted);font-size:11px}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media(max-width:720px){.two-col{grid-template-columns:1fr}.toolbar{flex-direction:column;align-items:stretch}.toolbar input,.toolbar select{width:100%}}
-  .report-tabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-  .report-tab{padding:6px 10px;border-radius:6px;font-size:12px;border:1px solid var(--border);background:#fff}
-  .report-tab.active{background:#eef2ff;border-color:#c7d2fe;color:#4f46e5;font-weight:700}
-  .report-section{margin-top:10px}
-  .activity-row{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
-  .activity-row:last-child{border-bottom:none}
-  .activity-meta{color:var(--muted);font-size:12px}
-  .section-title{font-size:16px;font-weight:700;margin:6px 0 8px}
-  .muted{color:var(--muted)}
+  td.notes-cell{white-space:normal;min-width:160px;max-width:240px}
+  select.pill{appearance:none;border:none;padding:4px 22px 4px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;width:auto;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+  .pill.new{background:var(--pill-new-bg);color:var(--pill-new-c)}
+  .pill.contacted{background:var(--pill-contacted-bg);color:var(--pill-contacted-c)}
+  .pill.qualified{background:var(--pill-qualified-bg);color:var(--pill-qualified-c)}
+  .pill.proposal{background:var(--pill-proposal-bg);color:var(--pill-proposal-c)}
+  .pill.won{background:var(--pill-won-bg);color:var(--pill-won-c)}
+  .pill.lost{background:var(--pill-lost-bg);color:var(--pill-lost-c)}
+  .socials{display:flex;gap:4px}
+  .soc{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-weight:700;font-size:11px;background:#fff;color:#444}
+  .soc:hover{background:#eef2ff}
+  .modal-back{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+  .modal{background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;padding:20px}
+  .modal h2{font-size:16px;margin-bottom:14px}
+  .modal .row{margin-bottom:10px}
+  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+  #toast-wrap{position:fixed;bottom:18px;right:18px;z-index:200;display:flex;flex-direction:column;gap:8px}
+  .toast{background:#111827;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.2);animation:tin .2s ease}
+  .toast.err{background:#dc2626}
+  .toast.ok{background:#059669}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  /* login */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .login-card{max-width:360px;width:100%}
+  .login-card h1{text-align:center;font-size:20px;margin-bottom:6px}
+  .login-card p.sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:18px}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab-btn{font-size:13px}
+  .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .ai-result{margin-top:10px;background:#f8fafc;border:1px dashed var(--border);border-radius:8px;padding:10px;font-size:13px;white-space:pre-wrap;white-space:normal}
+  .logline{font-size:12px;padding:7px 0;border-bottom:1px solid var(--border)}
+  .logline:last-child{border-bottom:none}
+  .logline .who{font-weight:700}
+  .logline .when{color:var(--muted);float:right}
+  .empty{padding:30px;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
 
-<!-- Login -->
-<div id="loginView" class="login">
-  <div class="login-box">
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="card login-card">
     <h1>Sales CRM</h1>
-    <p>Sign in to continue</p>
-    <label>Email</label>
-    <input type="email" id="loginEmail" autocomplete="email">
-    <label>Password</label>
-    <input type="password" id="loginPassword" autocomplete="current-password">
-    <button class="primary" onclick="doLogin()">Sign In</button>
-    <button style="margin-top:10px; width:100%; font-size:11px; color:var(--muted)" onclick="openCloudSetup()">Configure Database</button>
+    <p class="sub">Shared cloud workspace. Sign in to continue.</p>
+    <form id="login-form">
+      <div class="row"><label for="login-key">Username</label><input id="login-key" autocomplete="username" required></div>
+      <div class="row"><label for="login-pass">Password</label><input id="login-pass" type="password" autocomplete="current-password" required></div>
+      <button type="submit" id="btn-login" class="primary" style="width:100%;margin-top:6px">Sign In</button>
+    </form>
+    <div id="login-error" style="color:#dc2626;font-size:13px;margin-top:10px"></div>
   </div>
 </div>
 
-<!-- App -->
-<div id="appView" class="hidden">
+<!-- APP -->
+<div id="app" class="hidden">
   <header class="top">
     <div class="brand">Sales CRM</div>
     <div class="user">
-      <span id="userName"></span>
-      <span id="userRole" class="badge"></span>
-      <button onclick="logout()">Logout</button>
+      <span id="who-name"></span>
+      <span class="badge" id="who-role"></span>
+      <button id="btn-users" class="small">Users</button>
+      <button id="btn-reports" class="small">Reports</button>
+      <button id="btn-settings" class="small">Settings</button>
+      <button id="btn-logout" class="small danger">Logout</button>
     </div>
   </header>
 
-  <main style="padding:16px;max-width:1200px;margin:0 auto">
-    <div id="statsRow" class="grid stats" style="margin-bottom:14px"></div>
+  <main style="padding:16px 20px;max-width:1500px;margin:0 auto">
+    <div class="stats grid" id="stats-row"></div>
 
-    <div id="adminTools" class="hidden" style="margin:12px 0">
-      <div class="card">
-        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
-          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-            <button class="primary" onclick="openAddModal()">+ Add Lead</button>
-            <label class="button-like" style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);padding:8px 14px;border-radius:6px;background:#fff;cursor:pointer">
-              Import CSV
-              <input type="file" id="csvFile" accept=".csv" onchange="importCSV(this)" style="display:none">
-            </label>
-            <button onclick="exportCSV()">Export CSV</button>
-            <button onclick="openUsersPanel()">Manage Users</button>
-            <button onclick="showReports()">Reports</button>
-          </div>
-          <button onclick="toggleSettings()">Settings</button>
-        </div>
-        <div id="settingsPanel" class="hidden settings-section">
-          <h3>Cloud Settings (Supabase)</h3>
-          <div class="field">
-            <label>Supabase URL</label>
-            <input type="text" id="sbUrl" placeholder="https://xyz.supabase.co">
-          </div>
-          <div class="field">
-            <label>Anon Key</label>
-            <input type="password" id="sbKey" placeholder="eyJhbG... ">
-          </div>
-          <div class="field">
-            <label>OpenRouter API Key</label>
-            <input type="password" id="orKey" placeholder="sk-or-...">
-          </div>
-          <div class="field">
-            <label>Model</label>
-            <select id="orModelSelect" onchange="toggleCustomModel(this.value)">
-              <option value="">-- Select a free model --</option>
-              <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (free)</option>
-              <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (free)</option>
-              <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (free)</option>
-              <option value="huggingfaceh4/zephyr-7b-beta:free">Zephyr 7B (free)</option>
-              <option value="qwen/qwen-2-7b-instruct:free">Qwen2 7B (free)</option>
-              <option value="nousresearch/nous-capybara-7b:free">Capybara 7B (free)</option>
-              <option value="grype/mixtral-8x7b-instruct:free">Mixtral 8x7B (free)</option>
-              <option value="openchat/openchat_7b:free">OpenChat 7B (free)</option>
-              <option value="custom">Custom model ID...</option>
-            </select>
-            <input type="text" id="orModelCustom" class="hidden" placeholder="e.g. meta-llama/llama-3.1-8b-instruct:free">
-          </div>
-          <button class="primary" onclick="saveSettings()">Save</button>
-        </div>
-      </div>
+    <div class="toolbar">
+      <button id="btn-add" class="primary">+ Add Lead</button>
+      <button id="btn-import">Import CSV</button>
+      <button id="btn-export">Export CSV</button>
+      <input type="file" id="csv-file" accept=".csv,text/csv" class="hidden">
+      <input type="search" id="search" placeholder="Search leads...">
+      <select id="filter-status"><option value="">All statuses</option></select>
+      <select id="filter-assigned"><option value="">Everyone</option></select>
+      <button id="btn-refresh">Refresh</button>
     </div>
 
-    <div id="reportPanel" class="hidden card report-section">
-      <div class="section-title">User Activity Reports</div>
-      <div class="report-tabs">
-        <button class="report-tab active" onclick="setReportRange('4h', this)">Last 4 hours</button>
-        <button class="report-tab" onclick="setReportRange('24h', this)">Last 24 hours</button>
-        <button class="report-tab" onclick="setReportRange('all', this)">All time</button>
-      </div>
-      <div id="reportContent"></div>
-      <div style="margin-top:10px">
-        <button class="primary" onclick="downloadReportPdf()">Download PDF</button>
-        <button class="primary" onclick="printReport()">Print / Save as PDF</button>
-      </div>
-    </div>
-
-    <div class="toolbar card">
-      <select id="filterStatus" onchange="render()"><option value="">All Statuses</option></select>
-      <select id="filterMember" onchange="render()"><option value="">All Members</option></select>
-      <input type="text" id="filterSearch" placeholder="Search name, company, email" oninput="render()">
-    </div>
-
-    <div style="overflow-x:auto">
+    <div class="tablewrap">
       <table>
-        <thead><tr id="tHead"></tr></thead>
-        <tbody id="tBody"></tbody>
+        <thead><tr>
+          <th>Name</th><th>Company</th><th>Email</th><th>Phone</th>
+          <th>Status</th><th>Assigned To</th><th>Notes</th><th>Socials</th><th>AI</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="leads-body"></tbody>
       </table>
     </div>
-    <div id="empty" class="empty hidden">No leads yet. Upload a CSV to get started.</div>
+    <div id="leads-empty" class="empty hidden">No leads found.</div>
   </main>
 </div>
 
-<div id="toast" class="toast"></div>
+<!-- MODAL HOST -->
+<div id="modal-host"></div>
+<div id="toast-wrap"></div>
 
 <script>
-/* ===== Global Constants & State ===== */
-const STATUSES = ['NEW','CONTACTED','QUALIFIED','PROPOSAL','WON','LOST'];
-const SETTINGS_STORE = 'crm_settings_v1';
-let session = null;
+"use strict";
+/* ============ CONFIG ============ */
+var SUPABASE_URL = "https://xbxpaftzskrvwxzzxukk.supabase.co";
+var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhieHBhZnR6c2tydnd4enp4dWtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1OTcwMTgsImV4cCI6MjEwMzE3MzAxOH0.vIzTHeytWhms7p5JS8CSoJzp276k7QRUj6l_l14Tpmk";
+var STATUSES = ["NEW","CONTACTED","QUALIFIED","PROPOSAL","WON","LOST"];
+var STATUS_COLORS = {NEW:"indigo",CONTACTED:"red",QUALIFIED:"amber",PROPOSAL:"blue",WON:"green",LOST:"gray"};
+console.log("CRM Loaded Successfully");
 
-/* ===== Basic Helpers ===== */
-function esc(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;'); }
-function uid(){ return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7); }
-function toast(msg){
-  const el = document.getElementById('toast');
-  if(!el) return;
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 2200);
+/* ============ STATE ============ */
+var session = null;        // {key,name,email,role}
+var allLeads = [];
+var allUsers = [];
+var searchQ = "";
+var filterStatus = "";
+var filterAssigned = "";
+
+/* ============ HELPERS ============ */
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
-function loadSettings(){ try{ return JSON.parse(localStorage.getItem(SETTINGS_STORE)||'{}'); }catch(e){ return {}; } }
-function saveSettingsObj(s){ localStorage.setItem(SETTINGS_STORE, JSON.stringify(s)); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,9); }
+function now(){ return Date.now(); }
 
-/* ===== API Core ===== */
-async function api(table, method='GET', query='', body=null) {
-  const settings = loadSettings();
-  if(!settings.sbUrl || !settings.sbKey) throw new Error('Cloud settings not configured. Click "Configure Database" on login screen.');
+function toast(msg, kind){
+  var t = document.createElement("div");
+  t.className = "toast" + (kind === "err" ? " err" : kind === "ok" ? " ok" : "");
+  t.textContent = msg;
+  $("toast-wrap").appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3500);
+}
 
-  const url = `${settings.sbUrl}/rest/v1/${table}${query}`;
-  const options = {
-    method,
-    headers: {
-      'apikey': settings.sbKey,
-      'Authorization': `Bearer ${settings.sbKey}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    }
+/* Supabase REST via raw fetch */
+function sb(table, opts){
+  opts = opts || {};
+  var url = SUPABASE_URL + "/rest/v1/" + table + (opts.qs || "");
+  var headers = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json"
   };
-  if(body) options.body = JSON.stringify(body);
-
-  const res = await fetch(url, options);
-  if(!res.ok) {
-    const errText = await res.text();
-    throw new Error(`API Error: ${res.status} ${errText}`);
-  }
-  return res.json();
+  if (opts.prefer) headers["Prefer"] = opts.prefer;
+  return fetch(url, {
+    method: opts.method || "GET",
+    headers: headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(function(r){
+    if (!r.ok) {
+      return r.text().then(function(txt){
+        throw new Error("Supabase " + r.status + ": " + txt.slice(0, 200));
+      });
+    }
+    if (r.status === 204) return null;
+    return r.json();
+  });
 }
 
-/* ===== Auth Functions ===== */
-async function doLogin(){
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pw = document.getElementById('loginPassword').value;
-  if(!email || !pw) { toast('Fill all fields'); return; }
+/* ============ AUTH ============ */
+function loadSession(){
   try {
-    const users = await api('users', 'GET', `?email=eq.${email}`);
-    const user = users[0];
-    if(!user || user.password !== pw){ toast('Invalid credentials'); return; }
-    session = { key: user.key, email: user.email, name: user.name, role: user.role };
-    sessionStorage.setItem('crm_session', JSON.stringify(session));
-    showApp();
-  } catch(e) {
-    toast(e.message);
-  }
+    session = JSON.parse(sessionStorage.getItem("crm_session"));
+  } catch(e){ session = null; }
+}
+function saveSession(s){
+  if (s) sessionStorage.setItem("crm_session", JSON.stringify(s));
+  else sessionStorage.removeItem("crm_session");
 }
 
-function logout(){
+function doLogin(ev){
+  ev.preventDefault();
+  var keyEl = $("login-key"), passEl = $("login-pass");
+  var key = keyEl.value.trim(), pass = passEl.value;
+  if (!key || !pass) return;
+  var btn = $("btn-login");
+  btn.disabled = true; btn.textContent = "Signing in...";
+  $("login-error").textContent = "";
+  sb("users", { qs: "?key=eq." + encodeURIComponent(key) })
+    .then(function(rows){
+      if (!rows || !rows.length || rows[0].password !== pass){
+        $("login-error").textContent = "Invalid username or password.";
+        return;
+      }
+      var u = rows[0];
+      session = { key: u.key, name: u.name, email: u.email || "", role: u.role };
+      saveSession(session);
+      keyEl.value = ""; passEl.value = "";
+      enterApp();
+    })
+    .catch(function(err){ $("login-error").textContent = "Connection failed: " + err.message; })
+    .finally(function(){ btn.disabled = false; btn.textContent = "Sign In"; });
+}
+
+function doLogout(){
+  saveSession(null);
   session = null;
-  sessionStorage.removeItem('crm_session');
-  location.reload();
+  $("app").classList.add("hidden");
+  $("login-screen").classList.remove("hidden");
 }
 
-function restoreSession(){
-  const raw = sessionStorage.getItem('crm_session');
-  if(raw){ try{ session = JSON.parse(raw); }catch(e){ session=null; } }
+function enterApp(){
+  $("login-screen").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("who-name").textContent = session.name || session.key;
+  $("who-role").textContent = session.role.toUpperCase();
+  var isAdmin = session.role === "admin";
+  $("btn-users").classList.toggle("hidden", !isAdmin);
+  $("btn-reports").classList.toggle("hidden", !isAdmin);
+  $("btn-settings").classList.toggle("hidden", !isAdmin);
+  refreshData();
 }
 
-async function showApp(){
-  document.getElementById('loginView').classList.add('hidden');
-  document.getElementById('appView').classList.remove('hidden');
-  document.getElementById('userName').textContent = session.name;
-  document.getElementById('userRole').textContent = session.role;
-  if(session.role==='admin') document.getElementById('adminTools').classList.remove('hidden');
-  await render();
+/* ============ DATA LOAD ============ */
+function refreshData(){
+  var leadQs = "?order=createdat.desc&limit=1000";
+  var pLeads = sb("leads", { qs: leadQs });
+  var pUsers = sb("users", { qs: "?limit=500" });
+  Promise.all([pLeads, pUsers])
+    .then(function(res){
+      allLeads = res[0] || [];
+      allUsers = res[1] || [];
+      renderAll();
+    })
+    .catch(function(err){ toast("Failed to load data: " + err.message, "err"); });
 }
 
-/* ===== Setup Functions ===== */
-function openCloudSetup(){
-  const html = `<div class="modal" onclick="event.stopPropagation()">
-    <h3>Connect to Supabase</h3>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Enter your project details to enable login and data sync.</p>
-    <label>Supabase URL</label><input id="setup-url" placeholder="https://xyz.supabase.co">
-    <label>Anon Key</label><input type="password" id="setup-key" placeholder="eyJhbG... ">
-    <div class="actions">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="primary" onclick="saveCloudSetup()">Connect</button>
-    </div>
-  </div>`;
-  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
-  document.body.appendChild(bg);
-}
-
-function saveCloudSetup(){
-  const url = document.getElementById('setup-url').value.trim();
-  const key = document.getElementById('setup-key').value.trim();
-  if(!url || !key){ toast('Both fields are required'); return; }
-  const settings = loadSettings();
-  settings.sbUrl = url;
-  settings.sbKey = key;
-  saveSettingsObj(settings);
-  closeModal();
-  toast('Connected! You can now log in.');
-}
-
-function closeModal(){ const m=document.querySelector('.modal-bg'); if(m) m.remove(); }
-
-/* ===== Lead Actions ===== */
-async function assignLead(id, val){
-  try {
-    await api('leads', 'PATCH', `?id=eq.${id}`, { assignedTo: val || null });
-    await render();
-    toast('Assignment saved');
-  } catch(e) { toast(e.message); }
-}
-
-async function deleteLead(id){
-  if(!confirm('Delete this lead?')) return;
-  try {
-    await api('leads', 'DELETE', `?id=eq.${id}`);
-    await render();
-    toast('Lead deleted');
-  } catch(e) { toast(e.message); }
-}
-
-async function changeStatus(id, newStatus){
-  try {
-    await api('leads', 'PATCH', `?id=eq.${id}`, { status: newStatus });
-    await render();
-    toast('Status updated');
-  } catch(e) { toast(e.message); }
-}
-
-async function editSocial(id){
-  const leads = await api('leads', 'GET', `?id=eq.${id}`);
-  const lead = leads[0]; if(!lead) return;
-  const html = `<div class="modal" onclick="event.stopPropagation()">
-    <h3>Edit Social Links</h3>
-    <label>LinkedIn URL</label><input id="sl-linkedin" value="${esc(lead.socialLinks&&lead.socialLinks.linkedin)}">
-    <label>X URL</label><input id="sl-twitter" value="${esc(lead.socialLinks&&lead.socialLinks.twitter)}">
-    <label>Facebook URL</label><input id="sl-facebook" value="${esc(lead.socialLinks&&lead.socialLinks.facebook)}">
-    <div class="actions">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="primary" onclick="saveSocial('${id}')">Save</button>
-    </div>
-  </div>`;
-  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
-  document.body.appendChild(bg);
-}
-
-async function saveSocial(id){
-  const links = {
-    linkedin: document.getElementById('sl-linkedin').value.trim()||null,
-    twitter: document.getElementById('sl-twitter').value.trim()||null,
-    facebook: document.getElementById('sl-facebook').value.trim()||null
-  };
-  try {
-    await api('leads', 'PATCH', `?id=eq.${id}`, { socialLinks: links });
-    closeModal(); await render(); toast('Social links saved');
-  } catch(e) { toast(e.message); }
-}
-
-/* ===== Lead Creation ===== */
-function openAddModal(){
-  const html = `<div class="modal" onclick="event.stopPropagation()">
-    <h3>Add Lead</h3>
-    <label>Name *</label><input id="a-name">
-    <label>Company</label><input id="a-company">
-    <label>Email</label><input id="a-email" type="email">
-    <label>Phone</label><input id="a-phone">
-    <label>Notes</label><textarea id="a-notes" rows="3"></textarea>
-    <label>Status</label><select id="a-status">${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
-    <label>Assigned To</label><select id="a-assign"><option value="">Unassigned</option></select>
-    <div class="actions">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="primary" onclick="saveNewLead()">Save</button>
-    </div>
-  </div>`;
-  const bg = document.createElement('div'); bg.className='modal-bg'; bg.onclick=closeModal; bg.innerHTML=html;
-  document.body.appendChild(bg);
-  loadMemberDropdown('a-assign');
-}
-
-async function loadMemberDropdown(id){
-  try {
-    const users = await api('users', 'GET');
-    const members = users.filter(u=>u.role==='member');
-    const sel = document.getElementById(id);
-    if(sel){
-      sel.innerHTML = '<option value="">Unassigned</option>' + members.map(m=>`<option value="${esc(m.key)}">${esc(m.name)}</option>`).join('');
+function visibleLeads(){
+  return allLeads.filter(function(l){
+    if (session.role !== "admin" && l.assignedto !== session.key) return false;
+    if (filterStatus && l.status !== filterStatus) return false;
+    if (filterAssigned && l.assignedto !== filterAssigned) return false;
+    if (searchQ){
+      var hay = ((l.name||"")+" "+(l.company||"")+" "+(l.email||"")+" "+(l.phone||"")+" "+(l.notes||"")).toLowerCase();
+      if (hay.indexOf(searchQ) === -1) return false;
     }
-  } catch(e) { console.error(e); }
+    return true;
+  });
 }
 
-async function saveNewLead(){
-  const name = document.getElementById('a-name').value.trim();
-  if(!name){ toast('Name is required'); return; }
-  const lead = {
+/* ============ RENDER ============ */
+function renderAll(){
+  renderStats();
+  renderFilters();
+  renderTable();
+}
+
+function renderStats(){
+  var scope = allLeads.filter(function(l){
+    return session.role === "admin" || l.assignedto === session.key;
+  });
+  var counts = {};
+  STATUSES.forEach(function(s){ counts[s] = 0; });
+  scope.forEach(function(l){ counts[l.status] = (counts[l.status] || 0) + 1; });
+  var html = '<div class="stat"><span class="num">' + scope.length + '</span><span class="lbl">Total Leads</span></div>';
+  html += STATUSES.map(function(s){
+    return '<div class="stat"><span class="num">' + counts[s] + '</span><span class="lbl">' + s + '</span></div>';
+  }).join("");
+  $("stats-row").innerHTML = html;
+}
+
+function renderFilters(){
+  var fs = $("filter-status");
+  var curS = fs.value;
+  fs.innerHTML = '<option value="">All statuses</option>' +
+    STATUSES.map(function(s){ return '<option value="' + s + '">' + s + '</option>'; }).join("");
+  fs.value = curS;
+
+  var fa = $("filter-assigned");
+  var prevA = fa.value;
+  fa.innerHTML = '<option value="">Everyone</option>' +
+    allUsers.map(function(u){ return '<option value="' + esc(u.key) + '">' + esc(u.name || u.key) + '</option>'; }).join("");
+  fa.value = prevA;
+  fa.classList.toggle("hidden", session.role !== "admin");
+}
+
+function sociallinksHtml(l){
+  var q = encodeURIComponent((l.name || "") + " " + (l.company || ""));
+  var links = [
+    ["in", "https://www.linkedin.com/search/results/all/?keywords=" + q],
+    ["X", "https://x.com/search?q=" + q],
+    ["f", "https://www.facebook.com/search/top?q=" + q],
+    ["G", "https://www.google.com/search?q=" + q]
+  ];
+  return '<div class="socials">' + links.map(function(p){
+    return '<a class="soc" href="' + p[1] + '" target="_blank" rel="noopener noreferrer" title="Search ' + esc(l.name) + ' on ' + esc(p[0]) + '">' + esc(p[0]) + '</a>';
+  }).join("") + "</div>";
+}
+
+function assignedOptions(selected, disabledForNonAdmin){
+  var opts = '<option value="">Unassigned</option>';
+  opts += allUsers.filter(function(u){
+    return session.role === "admin" ? true : u.key === session.key;
+  }).map(function(u){
+    var sel = u.key === selected ? " selected" : "";
+    return '<option value="' + esc(u.key) + '"' + sel + '>' + esc(u.name || u.key) + '</option>';
+  }).join("");
+  return opts;
+}
+
+function renderTable(){
+  var rows = visibleLeads();
+  var tbody = $("leads-body");
+  tbody.innerHTML = "";
+  $("leads-empty").classList.toggle("hidden", rows.length > 0);
+
+  rows.forEach(function(l){
+    var tr = document.createElement("tr");
+
+    var statusSel = '<select data-act="status" data-id="' + esc(l.id) + '" class="pill ' + esc(String(l.status || "NEW").toLowerCase()) + '">';
+    statusSel += STATUSES.map(function(s){
+      return '<option value="' + s + '"' + (String(l.status).toUpperCase() === s ? " selected" : "") + ">" + s + "</option>";
+    }).join("");
+    statusSel += "</select>";
+
+    var canAssign = session.role === "admin";
+    var assignSel = '<select data-act="assign" data-id="' + esc(l.id) + '" ' + (canAssign ? "" : "disabled") + ">" +
+      assignedOptions(l.assignedto) + "</select>";
+
+    var actions = "";
+    if (canAssign || true) {
+      actions += '<button class="small" data-act="edit" data-id="' + esc(l.id) + '">Edit</button> ';
+    }
+    if (canAssign || l.assignedto === session.key) {
+      actions += '<button class="small danger" data-act="delete" data-id="' + esc(l.id) + '">Delete</button>';
+    }
+
+    tr.innerHTML =
+      "<td><strong>" + esc(l.name) + "</strong></td>" +
+      "<td>" + esc(l.company) + "</td>" +
+      "<td>" + esc(l.email) + "</td>" +
+      "<td>" + esc(l.phone) + "</td>" +
+      "<td>" + statusSel + "</td>" +
+      "<td>" + assignSel + "</td>" +
+      '<td class="notes-cell" title="' + esc(l.notes) + '">' + esc(l.notes) + "</td>" +
+      "<td>" + sociallinksHtml(l) + "</td>" +
+      '<td><button class="small primary" data-act="ai" data-id="' + esc(l.id) + '">AI Search</button></td>' +
+      "<td>" + actions + "</td>";
+
+    tbody.appendChild(tr);
+  });
+
+  // delegated events are bound once in bindEvents; nothing per-row here
+}
+
+/* ============ ACTIVITY LOG ============ */
+function logActivity(action, targetid, targetname){
+  var entry = {
     id: uid(),
-    name,
-    company: document.getElementById('a-company').value.trim(),
-    email: document.getElementById('a-email').value.trim(),
-    phone: document.getElementById('a-phone').value.trim(),
-    notes: document.getElementById('a-notes').value.trim(),
-    status: document.getElementById('a-status').value,
-    assignedTo: document.getElementById('a-assign').value || null,
-    createdAt: Date.now(),
-    socialLinks: null
+    userkey: session.key,
+    username: session.name || session.key,
+    userRole: session.role,
+    action: action,
+    targetid: targetid || "",
+    targetname: targetname || "",
+    timestamp: now()
   };
-  try {
-    await api('leads', 'POST', '', lead);
-    closeModal(); await render(); toast('Lead added');
-  } catch(e) { toast(e.message); }
+  sb("activity", { method: "POST", body: entry, prefer: "return=minimal" })
+    .catch(function(e){ console.warn("activity log failed:", e.message); });
 }
 
-/* ===== CSV Logic ===== */
-async function importCSV(input){
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e){
-    const text = e.target.result;
-    const rows = parseCSV(text);
-    let imported=0, skipped=0;
-    for(const r of rows){
-      const name = (r.name||'').trim();
-      if(!name){ skipped++; continue; }
-      try {
-        await api('leads', 'POST', '', {
-          id: uid(), name, company: (r.company||'').trim(), email: (r.email||'').trim(), phone: (r.phone||'').trim(), notes: (r.notes||'').trim(),
-          status: normalizeStatus((r.status||'').trim())||'NEW', assignedTo: r.assignedTo||null, createdAt: Date.now(), socialLinks: null
-        });
-        imported++;
-      } catch(err) { skipped++; }
+/* ============ LEAD CRUD ============ */
+function findLead(id){
+  for (var i = 0; i < allLeads.length; i++) if (allLeads[i].id === id) return allLeads[i];
+  return null;
+}
+
+function openLeadModal(existing){
+  var isEdit = !!existing;
+  var host = $("modal-host");
+  var back = document.createElement("div");
+  back.className = "modal-back";
+  back.innerHTML =
+    '<div class="modal">' +
+      "<h2>" + (isEdit ? "Edit Lead" : "Add Lead") + "</h2>" +
+      '<form id="lead-form">' +
+        '<div class="row"><label>Name</label><input name="name" required value="' + esc(isEdit ? existing.name : "") + '"></div>' +
+        '<div class="row"><label>Company</label><input name="company" value="' + esc(isEdit ? existing.company : "") + '"></div>' +
+        '<div class="row"><label>Email</label><input name="email" type="email" value="' + esc(isEdit ? existing.email : "") + '"></div>' +
+        '<div class="row"><label>Phone</label><input name="phone" value="' + esc(isEdit ? existing.phone : "") + '"></div>' +
+        '<div class="row"><label>Status</label><select name="status">' +
+          STATUSES.map(function(s){ return '<option value="' + s + '"' + (isEdit && String(existing.status).toUpperCase() === s ? " selected" : "") + ">" + s + "</option>"; }).join("") +
+        "</select></div>" +
+        (session.role === "admin"
+          ? '<div class="row"><label>Assigned To</label><select name="assignedto">' + assignedOptions(isEdit ? existing.assignedto : session.key) + "</select></div>"
+          : "") +
+        '<div class="row"><label>Notes</label><textarea name="notes" rows="3">' + esc(isEdit ? existing.notes : "") + "</textarea></div>" +
+        '<div class="actions">' +
+          '<button type="button" data-close="1">Cancel</button>' +
+          '<button type="submit" class="primary">' + (isEdit ? "Save Changes" : "Add Lead") + "</button>" +
+        "</div>" +
+      "</form>" +
+    "</div>";
+  host.innerHTML = "";
+  host.appendChild(back);
+
+  function close(){ host.innerHTML = ""; }
+
+  back.addEventListener("click", function(e){
+    if (e.target === back || e.target.getAttribute && e.target.getAttribute("data-close")) close();
+  });
+  back.querySelector("#lead-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var rec = {
+      name: String(fd.get("name") || "").trim(),
+      company: String(fd.get("company") || "").trim(),
+      email: String(fd.get("email") || "").trim(),
+      phone: String(fd.get("phone") || "").trim(),
+      notes: String(fd.get("notes") || "").trim(),
+      status: String(fd.get("status") || "NEW"),
+      assignedto: fd.get("assignedto") ? String(fd.get("assignedto")) : (isEdit ? existing.assignedto : session.key)
+    };
+    var p;
+    if (isEdit){
+      rec.id = existing.id;
+      p = sb("leads", { method: "PATCH", qs: "?id=eq." + encodeURIComponent(rec.id), body: rec, prefer: "return=minimal" })
+            .then(function(){ logActivity("Updated lead", rec.id, rec.name); toast("Lead updated", "ok"); });
+    } else {
+      rec.id = uid();
+      rec.createdat = now();
+      rec.sociallinks = {};
+      p = sb("leads", { method: "POST", body: rec, prefer: "return=minimal" })
+            .then(function(){ logActivity("Created lead", rec.id, rec.name); toast("Lead added", "ok"); });
     }
-    await render();
-    toast(imported+' imported, '+skipped+' skipped');
-    input.value = '';
+    p.then(close)
+     .then(refreshData)
+     .catch(function(err){ toast("Save failed: " + err.message, "err"); });
+  });
+}
+
+function deleteLead(id){
+  var l = findLead(id);
+  if (!l) return;
+  if (!window.confirm('Delete lead "' + (l.name || id) + '"? This cannot be undone.')) return;
+  sb("leads", { method: "DELETE", qs: "?id=eq." + encodeURIComponent(id), prefer: "return=minimal" })
+    .then(function(){
+      logActivity("Deleted lead", id, l.name);
+      toast("Lead deleted", "ok");
+      refreshData();
+    })
+    .catch(function(err){ toast("Delete failed: " + err.message, "err"); });
+}
+
+function updateField(id, field, value){
+  var patch = {};
+  patch[field] = value;
+  sb("leads", { method: "PATCH", qs: "?id=eq." + encodeURIComponent(id), body: patch, prefer: "return=minimal" })
+    .then(function(){
+      var l = findLead(id);
+      logActivity(field === "status" ? "Changed status to " + value : "Reassigned lead to " + value,
+                  id, l ? l.name : id);
+      toast("Saved", "ok");
+      refreshData();
+    })
+    .catch(function(err){ toast("Save failed: " + err.message, "err"); refreshData(); });
+}
+
+/* ============ CSV ============ */
+function parseCSVLine(line){
+  var out = [], cur = "", inQ = false;
+  for (var i = 0; i < line.length; i++){
+    var c = line[i];
+    if (inQ){
+      if (c === '"'){
+        if (line[i+1] === '"'){ cur += '"'; i++; }
+        else inQ = false;
+      } else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ","){ out.push(cur); cur = ""; }
+      else cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function exportCSV(){
+  var rows = allLeads.filter(function(l){ return session.role === "admin" || l.assignedto === session.key; });
+  if (!rows.length){ toast("Nothing to export", "err"); return; }
+  var header = ["name","company","email","phone","status","assignedto","notes"];
+  function cell(v){
+    v = v == null ? "" : String(v);
+    if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+  var lines = [header.join(",")];
+  rows.forEach(function(l){
+    lines.push([l.name,l.company,l.email,l.phone,l.status,l.assignedto,l.notes].map(cell).join(","));
+  });
+  downloadFile("leads_export_" + new Date().toISOString().slice(0,10) + ".csv", "\uFEFF" + lines.join("\n"), "text/csv");
+  toast("Exported " + rows.length + " leads", "ok");
+}
+
+function importCSV(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    var text = String(reader.result).replace(/^\uFEFF/, "");
+    var lines = text.split(/\r?\n/).filter(function(x){ return x.trim() !== ""; });
+    if (!lines.length){ toast("Empty CSV", "err"); return; }
+    var head = parseCSVLine(lines[0]).map(function(h){ return h.trim().toLowerCase(); });
+    var idx = function(names){
+      for (var i = 0; i < names.length; i++){
+        var j = head.indexOf(names[i]);
+        if (j > -1) return j;
+      }
+      return -1;
+    };
+    var map = {
+      name: idx(["name","full name"]),
+      company: idx(["company","organization"]),
+      email: idx(["email","e-mail"]),
+      phone: idx(["phone","mobile","telephone"]),
+      notes: idx(["notes","note","comments"]),
+      status: idx(["status"])
+    };
+    if (map.name === -1){ toast('CSV must include a "name" column', "err"); return; }
+    var records = [];
+    var stamp = now();
+    lines.slice(1).forEach(function(line, i){
+      var cells = parseCSVLine(line);
+      function get(k){ return map[k] > -1 && cells[map[k]] ? String(cells[map[k]]).trim() : ""; }
+      var st = get("status").toUpperCase();
+      records.push({
+        id: uid(),
+        name: get("name"),
+        company: get("company"),
+        email: get("email"),
+        phone: get("phone"),
+        notes: get("notes"),
+        status: STATUSES.indexOf(st) > -1 ? st : "NEW",
+        assignedto: session.key,
+        createdat: stamp + i,
+        sociallinks: {}
+      });
+    });
+    if (!records.length){ toast("No importable rows found", "err"); return; }
+    sb("leads", { method: "POST", body: records, prefer: "return=minimal" })
+      .then(function(){
+        logActivity("Imported " + records.length + " leads from CSV", "", "");
+        toast("Imported " + records.length + " leads", "ok");
+        refreshData();
+      })
+      .catch(function(err){ toast("Import failed: " + err.message, "err"); });
   };
   reader.readAsText(file);
 }
-function parseCSV(text){
-  const rows = []; let cur=[]; let cell=''; let inQ=false; let i=0;
-  while(i<text.length){
-    const ch = text[i];
-    if(inQ){
-      if(ch==='"' && text[i+1]==='"'){ cell+='"'; i+=2; continue; }
-      if(ch==='"'){ inQ=false; i++; continue; }
-      cell+=ch; i++; continue;
-    }
-    if(ch==='"'){ inQ=true; i++; continue; }
-    if(ch===','){ cur.push(cell.trim()); cell=''; i++; continue; }
-    if(ch==='\n' || (ch==='\r' && text[i+1]==='\n')){
-      cur.push(cell.trim()); cell='';
-      if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur));
-      cur=[]; i+= (ch==='\r'?2:1); continue;
-    }
-    cell+=ch; i++;
-  }
-  if(cell||cur.length) { cur.push(cell.trim()); if(cur.length>1 || cur[0]!=='') rows.push(objectify(cur)); }
-  return rows;
-}
-function objectify(arr){
-  const keys = ['name','company','email','phone','notes','status','assignedTo'];
-  const obj = {};
-  keys.forEach((k,idx)=>{ if(idx<arr.length) obj[k]=arr[idx]; });
-  return obj;
-}
-function normalizeStatus(s){ const up = s.toUpperCase(); return STATUSES.includes(up)?up:null; }
 
-async function exportCSV(){
-  const leads = await getVisibleLeads();
-  if(!leads.length){ toast('No leads to export'); return; }
-  const header = 'name,company,email,phone,notes,status,assignedTo,linkedin,twitter,facebook';
-  const rows = leads.map(l=>{
-    const r = [csvEscape(l.name), csvEscape(l.company), csvEscape(l.email), csvEscape(l.phone), csvEscape(l.notes), l.status||'', l.assignedTo||''];
-    const sl = l.socialLinks||{};
-    r.push(csvEscape(sl.linkedin||''), csvEscape(sl.twitter||''), csvEscape(sl.facebook||''));
-    return r.join(',');
+function downloadFile(name, content, mime){
+  var blob = new Blob([content], { type: mime });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* ============ AI SEARCH (OpenRouter) ============ */
+function aiSearch(id, btn){
+  var l = findLead(id);
+  if (!l) return;
+  var key = localStorage.getItem("or_api_key") || "";
+  var model = localStorage.getItem("or_model") || "openai/gpt-4o-mini";
+  if (!key){ toast("Set your OpenRouter API key in Settings first", "err"); return; }
+  btn.disabled = true;
+  var old = btn.textContent;
+  btn.textContent = "...";
+  fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + key,
+      "Content-Type": "application/json",
+      "HTTP-Referer": location.origin || "https://sales-crm.local",
+      "X-Title": "Sales CRM"
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [{
+        role: "user",
+        content: "You are a sales assistant. Lead: " + (l.name || "") +
+          (l.company ? " at " + l.company : "") +
+          ". Notes: " + (l.notes || "none") +
+          ". Status: " + l.status +
+          ". Give 3 short, specific talking points for a first outreach call. Plain text, numbered."
+      }]
+    })
+  }).then(function(r){ return r.json().then(function(j){ 
+      if (!r.ok) throw new Error((j.error && j.error.message) || ("HTTP " + r.status));
+      return j;
+  });}).then(function(j){
+    var txt = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : "No response.";
+    showAiResult(l, txt);
+  }).catch(function(err){
+    toast("AI Search failed: " + err.message, "err");
+  }).finally(function(){
+    btn.disabled = false;
+    btn.textContent = old;
   });
-  const csv = [header, ...rows].join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'leads.csv'; a.click();
-  toast('CSV exported');
-}
-function csvEscape(s){ if(s==null) return ''; const str=String(s); if(str.includes(',')||str.includes('"')||str.includes('\n')) return '"'+str.replace(/"/g,'""')+'"'; return str; }
-
-/* ===== Settings ===== */
-function toggleSettings(){ const p=document.getElementById('settingsPanel'); p.classList.toggle('hidden'); }
-function saveSettings(){
-  const s = {
-    sbUrl: document.getElementById('sbUrl').value.trim(),
-    sbKey: document.getElementById('sbKey').value.trim(),
-    orKey: document.getElementById('orKey').value.trim(),
-    model: document.getElementById('orModelSelect').value === 'custom' ? document.getElementById('orModelCustom').value.trim() : document.getElementById('orModelSelect').value
-  };
-  saveSettingsObj(s); toast('Settings saved');
-}
-function toggleCustomModel(val){
-  const custom = document.getElementById('orModelCustom');
-  if(val === 'custom') custom.classList.remove('hidden');
-  else custom.classList.add('hidden');
 }
 
-/* ===== User Management ===== */
-async function openUsersPanel(){
-  try {
-    const users = await api('users', 'GET');
-    const members = users.filter(u=>u.role==='member');
-    const bg = document.createElement('div'); bg.className='modal-bg';
-    bg.innerHTML = `<div class="modal" onclick="event.stopPropagation()">
-      <h3>Manage Users</h3>
-      <table style="width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px">
-        <thead><tr><th>Name</th><th>Email</th><th>Password</th><th></th></tr></thead>
-        <tbody>
-          ${members.map(u=>`<tr>
-            <td>${esc(u.name)}</td>
-            <td>${esc(u.email)}</td>
-            <td>${esc(u.password)}</td>
-            <td><button class="danger" onclick="deleteMember('${esc(u.key)}')">Delete</button></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      <h4>Add Member</h4>
-      <label>Name</label><input id="un-name">
-      <label>Email</label><input id="un-email" type="email">
-      <label>Password</label><input id="un-password" type="text">
-      <div class="actions">
-        <button onclick="closeModal()">Close</button>
-        <button class="primary" onclick="addMember()">Add</button>
-      </div>
-    </div>`;
-    bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
-    document.body.appendChild(bg);
-  } catch(e) { toast(e.message); }
-}
-async function addMember(){
-  const name = document.getElementById('un-name').value.trim();
-  const email = document.getElementById('un-email').value.trim().toLowerCase();
-  const password = document.getElementById('un-password').value.trim();
-  if(!name||!email||!password){ toast('Name, email, and password are required'); return; }
-  try {
-    await api('users', 'POST', '', { key: uid(), email, password, name, role: 'member' });
-    closeModal(); await render(); toast('Member added');
-  } catch(e) { toast(e.message); }
-}
-async function deleteMember(key){
-  if(!confirm('Remove this member?')) return;
-  try {
-    await api('users', 'DELETE', `?key=eq.${key}`);
-    await api('leads', 'PATCH', `?assignedTo=eq.${key}`, { assignedTo: null });
-    await render(); toast('Member removed');
-  } catch(e) { toast(e.message); }
+function showAiResult(l, text){
+  var host = $("modal-host");
+  var back = document.createElement("div");
+  back.className = "modal-back";
+  back.innerHTML =
+    '<div class="modal">' +
+      '<h2>Talking Points: ' + esc(l.name) + "</h2>" +
+      '<div class="ai-result">' + esc(text) + "</div>" +
+      '<div class="actions"><button class="primary" data-close="1">Close</button></div>' +
+    "</div>";
+  host.innerHTML = "";
+  host.appendChild(back);
+  back.addEventListener("click", function(e){
+    if (e.target === back || e.target.getAttribute("data-close")) host.innerHTML = "";
+  });
 }
 
-/* ===== AI Search ===== */
-async function aiSearch(id){
-  const leads = await api('leads', 'GET', `?id=eq.${id}`);
-  const lead = leads[0]; if(!lead) return;
-  const settings = loadSettings();
-  const key = settings.orKey; const model = settings.model||'openai/gpt-4o-mini';
-  if(!key){ toast('No OpenRouter key configured'); return; }
-  const prompt = `You are a sales assistant. Given the following lead info, infer likely role/industry context and suggest 3 short talking points for outreach. Do not claim real-time data.\n\nName: ${lead.name}\nCompany: ${lead.company||''}\nNotes: ${lead.notes||''}\nStatus: ${lead.status||''}`;
-  const btn = document.querySelector(`button[data-ai="${id}"]`); if(btn){ btn.disabled=true; btn.textContent='Searching...'; }
-  try{
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+key},
-      body: JSON.stringify({ model, messages:[{role:'user',content:prompt}], max_tokens:400 })
+/* ============ ADMIN PANELS ============ */
+function openModalShell(title, innerHtml){
+  var host = $("modal-host");
+  var back = document.createElement("div");
+  back.className = "modal-back";
+  back.innerHTML = '<div class="modal"><h2>' + esc(title) + "</h2>" + innerHtml +
+    '<div class="actions"><button data-close="1">Close</button></div></div>';
+  host.innerHTML = "";
+  host.appendChild(back);
+  back.addEventListener("click", function(e){
+    if (e.target === back || e.target.getAttribute("data-close")) host.innerHTML = "";
+  });
+  return back;
+}
+
+function openUsersPanel(){
+  if (session.role !== "admin") return;
+  var listHtml = '<div id="users-list">' +
+    allUsers.map(function(u){
+      return '<div class="logline" style="display:flex;justify-content:space-between;align-items:center">' +
+        "<span><strong>" + esc(u.name || u.key) + '</strong> <span class="badge">' + esc(u.role) + "</span></span>" +
+        (u.role === "admin"
+          ? ""
+          : '<button class="small danger" data-del-user="' + esc(u.key) + '">Delete</button>') +
+        "</div>";
+    }).join("") + "</div>";
+  var formHtml =
+    '<form id="add-user-form" style="margin-top:14px">' +
+      '<div class="row"><label>Username (key)</label><input name="key" required pattern="[a-zA-Z0-9_-]+" title="letters, numbers, dash, underscore"></div>' +
+      '<div class="row"><label>Password</label><input name="password" required></div>' +
+      '<div class="row"><label>Full Name</label><input name="name" required></div>' +
+      '<div class="actions"><button type="submit" class="primary">Add Member</button></div>' +
+    "</form>";
+  var back = openModalShell("User Management", listHtml + formHtml);
+
+  back.querySelector("#add-user-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var nu = {
+      key: String(fd.get("key")).trim(),
+      password: String(fd.get("password")),
+      name: String(fd.get("name")).trim(),
+      role: "member",
+      email: ""
+    };
+    sb("users", { method: "POST", body: nu, prefer: "return=minimal" })
+      .then(function(){
+        logActivity("Added member " + nu.name, "", "");
+        toast("Member added", "ok");
+        hostClose(back);
+        refreshData().then(openUsersPanelAfterRefresh);
+      })
+      .catch(function(err){ toast("Add failed (username taken?): " + err.message, "err"); });
+  });
+  Array.prototype.forEach.call(back.querySelectorAll("[data-del-user]"), function(btn){
+    btn.addEventListener("click", function(){
+      var k = btn.getAttribute("data-del-user");
+      var u = allUsers.filter(function(x){ return x.key === k; })[0];
+      if (!window.confirm("Delete member \"" + (u ? u.name : k) + "\"? Their leads stay but become unassigned.")) return;
+      sb("users", { method: "DELETE", qs: "?key=eq." + encodeURIComponent(k), prefer: "return=minimal" })
+        .then(function(){
+          logActivity("Deleted member " + (u ? u.name : k), "", "");
+          toast("Member deleted", "ok");
+          hostClose(back);
+          refreshData().then(openUsersPanelAfterRefresh);
+        })
+        .catch(function(err){ toast("Delete failed: " + err.message, "err"); });
     });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error?.message||('HTTP '+res.status));
-    const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : 'No content.';
-    showAiModal(id, text);
-  }catch(err){
-    toast('AI error: '+(err.message||'unknown'));
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent='AI Search'; }
-  }
+  });
 }
-function showAiModal(id, text){
-  const bg = document.createElement('div'); bg.className='modal-bg';
-  bg.innerHTML = `<div class="modal">
-    <h3>AI Search Result</h3>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">AI-generated — verify before use.</p>
-    <div id="aiResult" style="white-space:pre-wrap;background:#f9fafb;padding:10px;border-radius:6px;font-size:13px;line-height:1.55;border:1px solid var(--border)">${esc(text)}</div>
-    <div class="actions">
-      <button onclick="closeModal()">Close</button>
-      <button class="primary" onclick="saveAiToNotes('${id}')">Save to notes</button>
-    </div>
-  </div>`;
-  bg.onclick = (e)=>{ if(e.target===bg) closeModal(); };
-  document.body.appendChild(bg);
-}
-async function saveAiToNotes(id){
-  const text = document.getElementById('aiResult').textContent;
-  try {
-    const leads = await api('leads', 'GET', `?id=eq.${id}`);
-    const lead = leads[0];
-    const newNotes = (lead.notes?lead.notes+'\n\n':'') + 'AI Search: ' + text;
-    await api('leads', 'PATCH', `?id=eq.${id}`, { notes: newNotes });
-    closeModal(); await render(); toast('Saved to notes');
-  } catch(e) { toast(e.message); }
+function hostClose(back){ if (back.parentNode) back.parentNode.removeChild(back); }
+function openUsersPanelAfterRefresh(){ openUsersPanel(); }
+
+function openReportsPanel(){
+  if (session.role !== "admin") return;
+  sb("activity", { qs: "?order=timestamp.desc&limit=100" })
+    .then(function(rows){
+      var html = (rows && rows.length)
+        ? rows.map(function(a){
+            return '<div class="logline"><span class="when">' + new Date(a.timestamp).toLocaleString() + "</span>" +
+              '<span class="who">' + esc(a.username) + '</span> (' + esc(a.userRole) + "): " +
+              esc(a.action) + (a.targetname ? ' &mdash; <em>' + esc(a.targetname) + "</em>" : "") +
+              "</div>";
+          }).join("")
+        : '<div class="empty">No activity yet.</div>';
+      openModalShell("Reports: Activity Log", html);
+    })
+    .catch(function(err){ toast("Could not load activity: " + err.message, "err"); });
 }
 
-/* ===== Reports ===== */
-let reportRange = '4h';
-function setReportRange(range, btn){
-  reportRange = range;
-  document.querySelectorAll('.report-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderReports();
-}
-async function showReports(){
-  document.getElementById('reportPanel').classList.remove('hidden');
-  await renderReports();
-}
-function reportFilter(ts){
-  if(reportRange==='all') return true;
-  const cutoff = Date.now() - (reportRange==='4h' ? 4*60*60*1000 : 24*60*60*1000);
-  return ts >= cutoff;
-}
-async function renderReports(){
-  try {
-    const activity = (await api('activity', 'GET')).filter(a=>reportFilter(a.timestamp));
-    const leads = await api('leads', 'GET');
-    const container = document.getElementById('reportContent');
-    if(!activity.length){
-      container.innerHTML = '<div class="empty">No activity in this period.</div>';
-      return;
-    }
-    const rows = activity.map(a=>{
-      const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
-      const name = typeof targetLead==='object'?targetLead.name:targetLead;
-      return `<div class="activity-row">
-        <div>
-          <strong>${esc(a.userName)}</strong> <span class="muted">(${esc(a.userRole)})</span><br>
-          <span class="activity-meta">${esc(a.action)} — ${esc(name)}</span>
-        </div>
-        <div class="activity-meta">${new Date(a.timestamp).toLocaleString()}</div>
-      </div>`;
-    }).join('');
-    container.innerHTML = rows;
-  } catch(e) {
-    document.getElementById('reportContent').innerHTML = `<div class="empty">Error loading reports: ${esc(e.message)}</div>`;
-  }
-}
-async function downloadReportPdf(){
-  try {
-    const activity = (await api('activity', 'GET')).filter(a=>reportFilter(a.timestamp));
-    const leads = await api('leads', 'GET');
-    const now = new Date();
-    let text = 'Sales CRM Activity Report\n';
-    text += 'Generated: ' + now.toLocaleString() + '\n';
-    text += 'Period: ' + (reportRange==='4h'?'Last 4 hours':reportRange==='24h'?'Last 24 hours':'All time') + '\n';
-    text += 'Total events: ' + activity.length + '\n\n';
-    activity.forEach((a,i)=>{
-      const targetLead = a.targetId ? (leads.find(l=>l.id===a.targetId)||{name:a.targetName}) : {name:a.targetName||'—'};
-      const name = typeof targetLead==='object'?targetLead.name:targetLead;
-      text += (i+1) + '. ' + new Date(a.timestamp).toLocaleString() + ' | ' + a.userName + ' ('+a.userRole+') | ' + a.action + ' | ' + name + '\n';
-    });
-    const blob = new Blob([text], {type:'text/plain'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'activity-report.txt'; a.click();
-    toast('Report downloaded');
-  } catch(e) { toast(e.message); }
-}
-function printReport(){
-  const now = new Date();
-  const win = window.open('', '_blank');
-  if(!win){ toast('Popup blocked'); return; }
-  win.document.write(`<!DOCTYPE html><html><head><title>Activity Report</title>
-  <style>
-    body{font-family:Segoe UI,Roboto,Arial,sans-serif;padding:24px;color:#222}
-    h1{font-size:18px;margin-bottom:4px}
-    .meta{color:#6a737d;font-size:12px;margin-bottom:14px}
-    table{width:100%;border-collapse:collapse;font-size:12px}
-    th,td{border:1px solid #e1e4e8;padding:8px 10px;text-align:left}
-    th{background:#f9fafb;color:#6a737d;text-transform:uppercase;font-size:11px;letter-spacing:.04em}
-    tr:nth-child(even){background:#fafafa}
-    @media print{body{padding:0}}
-  </style></head><body>
-    <h1>Sales CRM Activity Report</h1>
-    <div class="meta">Generated: ${esc(now.toLocaleString())} · Period: ${esc(reportRange)}</div>
-    <p>Please use the "Download PDF" button for the full detailed activity log.</p>
-    <script>window.onload=()=>{ setTimeout(()=>window.print(), 200); }</script>
-  </body></html>`);
-  win.document.close();
+function openSettingsPanel(){
+  if (session.role !== "admin") return;
+  var savedKey = localStorage.getItem("or_api_key") || "";
+  var savedModel = localStorage.getItem("or_model") || "";
+  var back = openModalShell("Settings",
+    '<form id="settings-form">' +
+      '<div class="row"><label>OpenRouter API Key</label>' +
+        '<input name="orkey" placeholder="sk-or-v1-..." value="' + esc(savedKey) + '"></div>' +
+      '<div class="row"><label>Model</label>' +
+        '<input name="ormodel" placeholder="openai/gpt-4o-mini" value="' + esc(savedModel) + '"></div>' +
+      '<div class="actions"><button type="submit" class="primary">Save Settings</button></div>' +
+    "</form>");
+  back.querySelector("#settings-form").addEventListener("submit", function(e){
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    localStorage.setItem("or_api_key", String(fd.get("orkey")).trim());
+    localStorage.setItem("or_model", String(fd.get("ormodel")).trim());
+    toast("Settings saved", "ok");
+    hostClose(back);
+  });
 }
 
-/* ===== Rendering ===== */
-async function getVisibleLeads(){
-  let leads = await api('leads', 'GET');
-  const fStatus = document.getElementById('filterStatus').value;
-  const fMember = document.getElementById('filterMember').value;
-  const fText = document.getElementById('filterSearch').value.trim().toLowerCase();
-  if(fStatus) leads = leads.filter(l=>l.status===fStatus);
-  if(fMember) leads = leads.filter(l=>l.assignedTo===fMember);
-  if(fText) leads = leads.filter(l=> (l.name+' '+l.company+' '+l.email).toLowerCase().includes(fText));
-  if(session.role==='member') leads = leads.filter(l=>l.assignedTo===session.key);
-  return leads;
-}
-async function render(){
-  try {
-    const leads = await getVisibleLeads();
-    const settings = loadSettings();
-    const hasKey = !!(settings.orKey);
-    const users = await api('users', 'GET');
+/* ============ EVENT BINDING (once, delegated) ============ */
+function bindEvents(){
+  $("login-form").addEventListener("submit", doLogin);
+  $("btn-logout").addEventListener("click", doLogout);
+  $("btn-add").addEventListener("click", function(){ openLeadModal(null); });
+  $("btn-export").addEventListener("click", exportCSV);
+  $("btn-refresh").addEventListener("click", refreshData);
+  $("btn-import").addEventListener("click", function(){ $("csv-file").click(); });
+  $("csv-file").addEventListener("change", function(e){
+    if (e.target.files && e.target.files[0]) importCSV(e.target.files[0]);
+    e.target.value = "";
+  });
+  $("btn-users").addEventListener("click", openUsersPanel);
+  $("btn-reports").addEventListener("click", openReportsPanel);
+  $("btn-settings").addEventListener("click", openSettingsPanel);
 
-    const stats = {}; STATUSES.forEach(s=>stats[s]=0); stats['TOTAL']=0;
-    let pool = session.role==='member' ? (await api('leads', 'GET', `?assignedTo=eq.${session.key}`)) : leads;
-    pool.forEach(l=>{ stats[l.status]=(stats[l.status]||0)+1; stats['TOTAL']++; });
-    let statsHtml = `<div class="stat"><span class="num">${stats.TOTAL}</span><span class="lbl">Total Leads</span></div>`;
-    STATUSES.forEach(s=>{
-      statsHtml += `<div class="stat"><span class="num">${stats[s]||0}</span><span class="lbl">${s}</span></div>`;
-    });
-    document.getElementById('statsRow').innerHTML = statsHtml;
+  $("search").addEventListener("input", function(e){
+    searchQ = e.target.value.trim().toLowerCase();
+    renderTable();
+  });
+  $("filter-status").addEventListener("change", function(e){ filterStatus = e.target.value; renderTable(); });
+  $("filter-assigned").addEventListener("change", function(e){ filterAssigned = e.target.value; renderTable(); });
 
-    const tHead = document.getElementById('tHead');
-    let h = '<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Status</th><th>Notes</th><th>Social</th><th>AI Search</th>';
-    if(session.role==='admin') h += '<th>Assigned To</th><th>Actions</th>';
-    else h += '<th>Actions</th>';
-    tHead.innerHTML = h + '</tr>';
+  $("leads-body").addEventListener("change", function(e){
+    var t = e.target;
+    var act = t.getAttribute("data-act");
+    var id = t.getAttribute("data-id");
+    if (!act || !id) return;
+    if (t.tagName !== "SELECT") return;
+    updateField(id, act === "status" ? "status" : "assignedto", t.value);
+  });
 
-    const tBody = document.getElementById('tBody');
-    if(!leads.length){ tBody.innerHTML=''; document.getElementById('empty').classList.remove('hidden'); }
-    else{
-      document.getElementById('empty').classList.add('hidden');
-      tBody.innerHTML = leads.map(l=>{
-        const statusOptions = STATUSES.map(s=>`<option value="${s}" ${l.status===s?'selected':''}>${s}</option>`).join('');
-        const aiDisabled = hasKey ? '' : ' disabled title="Ask your admin to configure an AI key in Settings."';
-        let actions = `<button class="danger" onclick="deleteLead('${l.id}')">Delete</button>`;
-        if(session.role==='admin') actions += ` ${memberSelectHtml(l, false, users)}`;
-        return `<tr>
-          <td>${esc(l.name)}</td>
-          <td>${esc(l.company)}</td>
-          <td>${esc(l.email)}</td>
-          <td>${esc(l.phone)}</td>
-          <td><select onchange="changeStatus('${l.id}', this.value)" ${session.role==='member'?'disabled':''}>${statusOptions}</select></td>
-          <td>${esc(l.notes)}</td>
-          <td>${socialButtons(l)}</td>
-          <td><button class="primary" data-ai="${l.id}" onclick="aiSearch('${l.id}')"${aiDisabled}>AI Search</button></td>
-          ${session.role==='admin'?`<td>${memberSelectHtml(l, false, users)}</td>`:''}
-          <td>${actions}</td>
-        </tr>`;
-      }).join('');
-    }
-
-    const fSel = document.getElementById('filterStatus');
-    if(!fSel.children.length){ STATUSES.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; fSel.appendChild(o); }); }
-    const mSel = document.getElementById('filterMember');
-    if(!mSel.children.length){
-      mSel.innerHTML = '<option value="">All Members</option>' + users.filter(u=>u.role==='member').map(m=>`<option value="${esc(m.key)}">${esc(m.name)}</option>`).join('');
-    }
-
-    if(session.role==='admin'){
-      document.getElementById('sbUrl').value = settings.sbUrl||'';
-      document.getElementById('sbKey').value = settings.sbKey||'';
-      document.getElementById('orKey').value = settings.orKey||'';
-      const sel = document.getElementById('orModelSelect');
-      const custom = document.getElementById('orModelCustom');
-      if(sel && custom){
-        const model = settings.model||'';
-        const preset = Array.from(sel.options).some(o=>o.value===model);
-        if(preset){ sel.value = model; custom.classList.add('hidden'); }
-        else{ sel.value='custom'; custom.value=model; custom.classList.remove('hidden'); }
-      }
-    }
-  } catch(e) {
-    toast(e.message);
-  }
+  $("leads-body").addEventListener("click", function(e){
+    var t = e.target.closest("button[data-act]");
+    if (!t) return;
+    var act = t.getAttribute("data-act");
+    var id = t.getAttribute("data-id");
+    if (act === "edit"){ openLeadModal(findLead(id)); }
+    else if (act === "delete"){ deleteLead(id); }
+    else if (act === "ai"){ aiSearch(id, t); }
+  });
 }
 
-/* ===== Init ===== */
-(function init(){
-  console.log("CRM Booting...");
-  restoreSession();
-  if(session){ showApp(); }
-  console.log("CRM Ready.");
-})();
+/* ============ BOOT ============ */
+document.addEventListener("DOMContentLoaded", function(){
+  bindEvents();
+  loadSession();
+  if (session) enterApp();
+});
 </script>
 </body>
 </html>
