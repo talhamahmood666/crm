@@ -397,8 +397,11 @@ function sb(table, opts){
         throw new Error("Supabase " + r.status + ": " + txt.slice(0, 200));
       });
     }
-    if (r.status === 204) return null;
-    return r.json();
+    /* 201/204 with return=minimal have an EMPTY body: json() would throw */
+    return r.text().then(function(txt){
+      if (!txt) return null;
+      try { return JSON.parse(txt); } catch(e){ return null; }
+    });
   });
 }
 
