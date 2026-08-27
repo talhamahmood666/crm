@@ -69,6 +69,21 @@
   html[data-theme="dark"] .toast{background:#e8eaf0;color:#101014;border-color:#e8eaf0}
   html[data-theme="dark"] .toast.ok{background:#059669;color:#fff}
   html[data-theme="dark"] .toast.err{background:#be123c;color:#fff}
+  /* buttons & controls: dark surfaces, light text */
+  html[data-theme="dark"] button{color:var(--ink)}
+  html[data-theme="dark"] .navbtn{background:var(--glass-strong);color:var(--ink);border-color:var(--border)}
+  html[data-theme="dark"] .navbtn:hover{background:rgba(91,123,255,.18)}
+  html[data-theme="dark"] .navbtn.active{background:var(--accent);color:#fff;border-color:#5b7bff;box-shadow:3px 3px 0 rgba(0,0,0,.55)}
+  html[data-theme="dark"] button.danger{background:#3d1420;color:#fda4af;border-color:#7f1d3a}
+  html[data-theme="dark"] button.danger:hover{background:#57182b}
+  html[data-theme="dark"] #btn-theme{background:var(--glass-strong);color:var(--ink)}
+  html[data-theme="dark"] .badge.member{background:var(--panel);color:var(--ink);border-color:var(--border)}
+  html[data-theme="dark"] .badge{background:#dfe3ec;color:#101014}
+  html[data-theme="dark"] .chip.idle{background:#453a12;color:#fcd34d;border-color:#6b5b16}
+  html[data-theme="dark"] .chip{background:var(--pill-won-bg);color:var(--pill-won-c)}
+  html[data-theme="dark"] .soc{background:var(--panel);color:var(--ink)}
+  html[data-theme="dark"] .dot.off{background:#4b5563}
+  html[data-theme="dark"] .modal-back{background:rgba(0,0,0,.65)}
   *{box-sizing:border-box;margin:0;padding:0}
   html{background:
     radial-gradient(900px 500px at 8% -8%, rgba(37,71,244,.14), transparent 60%),
@@ -1178,7 +1193,7 @@ function runFind(back){
   status.innerHTML = '<span class="spinner"></span> AI is finding ' + esc(finderIndustry) + ' prospects, this can take a minute...';
 
   var promptText =
-    "Find " + count + " real, currently-operating companies in the " + finderIndustry + " industry" +
+    "Find " + count + " real, currently-operating companies in the " + finderIndustry + " industry, based in the United Kingdom" +
     (extra ? ". Focus on: " + extra : "") +
     '. For EACH company return exactly these fields as JSON inside an array named "prospects": ' +
     '{"company":"legal or trading name",' +
@@ -1189,13 +1204,13 @@ function runFind(back){
     '"linkedin":"the DIRECT LinkedIn URL of the company page or contact profile, like https://www.linkedin.com/company/NAME or https://www.linkedin.com/in/NAME - never a search or directory link",' +
     '"website":"company website URL",' +
     '"notes":"one line on what they do and why they could be a good lead"}.' +
-    " Only include companies you actually know from your knowledge. Never invent emails or phone numbers: leave them empty if not known. " +
+    " Only include companies you actually know from your knowledge that are UK-based. Never invent emails or phone numbers: leave them empty if not known. " +
     'Reply with ONLY valid JSON: {"prospects":[...]}. No markdown fences, no commentary.';
 
   status.innerHTML = '<span class="spinner"></span> Searching the live web for ' + esc(finderIndustry) + ' prospects...';
 
   tavilySearch(
-    "best " + finderIndustry + " companies" + (extra ? " " + extra : "") + " contact details decision maker",
+    "best " + finderIndustry + " companies in the United Kingdom" + (extra ? " " + extra : "") + " contact details decision maker",
     count * 2
   ).then(function(webCtx){
     var fullPrompt = promptText;
